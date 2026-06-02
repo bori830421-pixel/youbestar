@@ -1,0 +1,2036 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Youbestar Agent</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ui-scale: 0.9;
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --rail: #f0f1f3;
+      --line: #dedfe3;
+      --text: #16181d;
+      --muted: #707782;
+      --soft: #eceef2;
+      --active: #e2e3e7;
+      --primary: #2563eb;
+      --success: #14804a;
+      --warning: #d97706;
+      --danger: #ba2d22;
+      --shadow: 0 10px 30px rgba(20, 24, 31, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .config-screen,
+    .app-shell {
+      width: calc(100vw / var(--ui-scale));
+      height: calc(100vh / var(--ui-scale));
+      transform: scale(var(--ui-scale));
+      transform-origin: top left;
+    }
+
+    .config-screen {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(180deg, #f8fafc 0%, #eef1f5 100%);
+    }
+
+    .config-card {
+      width: min(520px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .brand-row,
+    .brand-mini,
+    .user-chip,
+    .header-actions,
+    .legend,
+    .skill-head,
+    .approval-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-row {
+      gap: 12px;
+    }
+
+    .brand-mark,
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #1f2937;
+      color: white;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    h2 {
+      font-size: 18px;
+    }
+
+    h3 {
+      font-size: 15px;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.75;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 22px;
+      line-height: 1.75;
+    }
+
+    .subtle,
+    .status,
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    input,
+    select {
+      height: 42px;
+      padding: 0 12px;
+    }
+
+    textarea {
+      min-height: 52px;
+      max-height: 180px;
+      padding: 13px 14px;
+      resize: vertical;
+    }
+
+    .primary-button,
+    .icon-button,
+    .ghost-button,
+    .danger-button {
+      min-height: 38px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .primary-button {
+      padding: 0 16px;
+      color: white;
+      background: var(--primary);
+      font-weight: 700;
+    }
+
+    .ghost-button {
+      padding: 0 12px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+
+    .danger-button {
+      padding: 0 12px;
+      color: white;
+      background: var(--danger);
+    }
+
+    .icon-button {
+      width: 38px;
+      padding: 0;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      color: currentColor;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr);
+      background: var(--surface);
+    }
+
+    .nav-rail {
+      min-width: 0;
+      background: var(--rail);
+      border-right: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .nav-top {
+      height: 76px;
+      padding: 18px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    .brand-mini .brand-mark {
+      width: 28px;
+      height: 28px;
+      font-size: 13px;
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .nav-section {
+      padding: 14px 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-label {
+      padding: 10px 12px 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav-item {
+      width: 100%;
+      min-height: 50px;
+      border-radius: 8px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+    }
+
+    .nav-item.active,
+    .nav-item:hover {
+      background: var(--active);
+    }
+
+    .nav-bottom {
+      padding: 14px 12px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 12px;
+    }
+
+    .user-chip {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .user-chip .avatar {
+      width: 26px;
+      height: 26px;
+      font-size: 12px;
+    }
+
+    .workspace {
+      min-width: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .chat-view {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 242px minmax(420px, 1fr);
+    }
+
+    .conversation-pane {
+      min-width: 0;
+      background: #fafafa;
+      border-right: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .pane-header {
+      min-height: 76px;
+      padding: 16px 12px 10px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 10px;
+    }
+
+    .pane-title-row,
+    .chat-header,
+    .skills-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .conversation-list {
+      padding: 10px 8px;
+      overflow-y: auto;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .conversation-card {
+      min-height: 82px;
+      border-radius: 8px;
+      padding: 10px;
+      display: grid;
+      gap: 5px;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .conversation-card.active,
+    .conversation-card:hover {
+      background: var(--active);
+      border-color: #d6d7dc;
+    }
+
+    .conversation-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .conversation-sub {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chat-pane {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 76px 1fr auto;
+      background: var(--surface);
+    }
+
+    .chat-header {
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chat-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .grid-icon {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 3px;
+      flex: 0 0 auto;
+    }
+
+    .grid-icon span {
+      border: 1.5px solid currentColor;
+      border-radius: 2px;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    .title-block h2 {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .header-actions {
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .messages {
+      overflow-y: auto;
+      padding: 28px 28px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .empty-state {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .message-row {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 760px);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .message-row.user {
+      grid-template-columns: minmax(0, 760px) 40px;
+      justify-content: end;
+    }
+
+    .message-row.user .avatar {
+      grid-column: 2;
+    }
+
+    .message-row.user .bubble {
+      grid-column: 1;
+      justify-self: end;
+      color: white;
+      background: var(--primary);
+    }
+
+    .bubble {
+      max-width: 100%;
+      border-radius: 8px;
+      padding: 14px 16px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f1f2f4;
+    }
+
+    .bubble.error {
+      color: var(--danger);
+    }
+
+    .bubble.assistant-rich {
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      white-space: normal;
+      background: transparent;
+    }
+
+    .reply-card,
+    .trace-card {
+      border-radius: 8px;
+      padding: 14px 16px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+    }
+
+    .reply-card {
+      white-space: pre-wrap;
+      background: #f1f2f4;
+    }
+
+    .trace-card {
+      display: grid;
+      gap: 10px;
+      border: 1px solid #f2b8b5;
+      background: #fff8f8;
+    }
+
+    .trace-card.tool-none {
+      border-color: #d9dde5;
+      background: #fbfbfc;
+    }
+
+    .trace-card.tool-ok {
+      border-color: #bdd9c8;
+      background: #f7fcf8;
+    }
+
+    .trace-card.tool-error {
+      border-color: #ef9a9a;
+      background: #fff7f7;
+    }
+
+    .trace-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .trace-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 800;
+    }
+
+    .trace-title code {
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trace-pill {
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      border: 1px solid currentColor;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+      flex: 0 0 auto;
+    }
+
+    .tool-ok .trace-pill {
+      color: var(--success);
+    }
+
+    .tool-none .trace-pill {
+      color: var(--muted);
+    }
+
+    .trace-body {
+      color: #23262d;
+      white-space: pre-wrap;
+    }
+
+    .trace-block {
+      margin: 6px 0 0;
+      border: 1px solid #d8dbe1;
+      border-radius: 6px;
+      background: #f2f3f5;
+      padding: 10px 12px;
+      color: #1f2937;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 12px 28px 18px;
+      display: grid;
+      gap: 8px;
+      background: rgba(250, 250, 251, 0.92);
+    }
+
+    .composer-toolbar {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+
+    .mode-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      color: #ef3129;
+      background: #fff;
+      border: 1.5px solid #ff3b30;
+      box-shadow: 0 1px 6px rgba(239, 49, 41, 0.08);
+    }
+
+    .mode-button.active {
+      background: #fff1f0;
+      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.08);
+    }
+
+    .mode-label {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 10px;
+      color: #30343b;
+      background: #fff;
+      line-height: 1.35;
+    }
+
+    .composer-spacer {
+      flex: 1 1 auto;
+    }
+
+    .composer-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .composer textarea {
+      min-height: 48px;
+      max-height: 140px;
+    }
+
+    .skills-view {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 76px 1fr;
+      background: var(--surface);
+    }
+
+    .skills-topbar {
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .skills-title-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .skills-title-row h2 {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+    }
+
+    .dot.official {
+      background: #3b82f6;
+    }
+
+    .dot.community {
+      background: var(--success);
+    }
+
+    .dot.local {
+      background: var(--warning);
+    }
+
+    .legend {
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+      min-width: 0;
+    }
+
+    .skills-layout {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 306px minmax(0, 1fr);
+    }
+
+    .skills-list-pane {
+      min-width: 0;
+      border-right: 1px solid var(--line);
+      background: #fafafa;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 8px 16px;
+    }
+
+    .skill-group {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .skill-group-header {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 10px;
+      color: #4b5563;
+      font-weight: 800;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .count-pill,
+    .skill-type {
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: var(--muted);
+      background: var(--soft);
+      font-size: 12px;
+    }
+
+    .skill-row {
+      width: 100%;
+      min-height: 66px;
+      border-radius: 8px;
+      padding: 9px 8px 9px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      text-align: left;
+    }
+
+    .skill-row > div:first-child {
+      min-width: 0;
+    }
+
+    .skill-row.active,
+    .skill-row:hover {
+      background: var(--active);
+      border-color: #d7d9de;
+    }
+
+    .skill-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 700;
+    }
+
+    .skill-name span:last-child {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .skill-desc {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    #skill-search {
+      width: min(360px, 32vw);
+      flex: 0 0 auto;
+    }
+
+    .switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex: 0 0 auto;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #c7cad1;
+      transition: background 160ms ease;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+      transition: transform 160ms ease;
+    }
+
+    .switch input:checked + .slider {
+      background: #2f2f32;
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(18px);
+    }
+
+    .skills-content {
+      min-width: 0;
+      overflow-y: auto;
+      padding: 34px 70px 80px;
+    }
+
+    .doc {
+      max-width: 950px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .doc h1 {
+      font-size: 32px;
+      line-height: 1.2;
+    }
+
+    .doc-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .skill-detail-card,
+    .approval-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfbfc;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .skill-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .approval-card {
+      margin-top: 8px;
+    }
+
+    .approval-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    code {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f8f8f9;
+      padding: 2px 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+    }
+
+    @media (max-width: 1100px) {
+      .app-shell {
+        grid-template-columns: 74px minmax(0, 1fr);
+      }
+
+      .nav-rail {
+        overflow: hidden;
+      }
+
+      .brand-name,
+      .nav-text,
+      .nav-label,
+      .nav-bottom .meta,
+      .user-chip strong {
+        display: none;
+      }
+
+      .nav-item {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .chat-view {
+        grid-template-columns: 220px minmax(320px, 1fr);
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      .config-screen,
+      .app-shell {
+        width: 100vw;
+        height: auto;
+        min-height: 100vh;
+        transform: none;
+      }
+
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-rail,
+      .conversation-pane {
+        display: none;
+      }
+
+      .chat-view,
+      .skills-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .skills-list-pane {
+        max-height: 42vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .skills-content {
+        padding: 22px 16px 48px;
+      }
+
+      .doc h1 {
+        font-size: 26px;
+      }
+
+      .skill-detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-pane {
+        min-height: 100vh;
+      }
+
+      .chat-header,
+      .composer,
+      .skills-topbar {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .messages {
+        padding: 18px 14px 24px;
+      }
+
+      .message-row,
+      .message-row.user {
+        grid-template-columns: 34px minmax(0, 1fr);
+      }
+
+      .message-row.user .avatar {
+        grid-column: 1;
+      }
+
+      .message-row.user .bubble {
+        grid-column: 2;
+        justify-self: stretch;
+      }
+
+      .composer-box {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section id="config-screen" class="config-screen">
+    <form id="config-form" class="config-card">
+      <div class="brand-row">
+        <div class="brand-mark">Y</div>
+        <div>
+          <h1>Youbestar Agent</h1>
+          <div class="subtle">模型配置</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="api-url">API 地址</label>
+        <input id="api-url" type="url" placeholder="https://api.deepseek.com/v1" required>
+      </div>
+      <div class="field">
+        <label for="model-name">模型名</label>
+        <input id="model-name" type="text" placeholder="deepseek-chat" required>
+      </div>
+      <div class="field">
+        <label for="api-key">API Key</label>
+        <input id="api-key" type="password" placeholder="sk-..." required>
+      </div>
+      <button id="login-button" class="primary-button" type="submit" disabled>登录</button>
+      <div id="config-status" class="status">正在读取配置...</div>
+    </form>
+  </section>
+
+  <section id="app-shell" class="app-shell" hidden>
+    <aside class="nav-rail">
+      <div class="nav-top">
+        <div class="brand-mini">
+          <div class="brand-mark">Y</div>
+          <div class="brand-name">Youbestar</div>
+        </div>
+        <button class="icon-button" type="button" title="收起">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div>
+        <div class="nav-label">对话</div>
+        <div class="nav-section">
+          <button id="nav-chat-button" class="nav-item active" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v10H8l-3 3V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            <span class="nav-text">对话</span>
+          </button>
+          <button class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M4 12a8 8 0 1 0 16 0 8 8 0 0 0-16 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="nav-text">历史</span>
+          </button>
+        </div>
+
+        <div class="nav-label">代理</div>
+        <div class="nav-section">
+          <button class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M5 8h14M6 5h12a1 1 0 0 1 1 1v15H5V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-text">任务</span>
+          </button>
+          <button class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM9 5v14M15 5v14" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span class="nav-text">看板</span>
+          </button>
+          <button id="nav-skills-button" class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4H8zM4 14h7v6H4zM13 14h7v6h-7zM12 8v4M7.5 14v-2h9v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            <span class="nav-text">技能</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-bottom">
+        <div class="meta">用户</div>
+        <div class="user-chip">
+          <div class="avatar">D</div>
+          <strong>default</strong>
+        </div>
+        <div class="meta">模型</div>
+        <select id="model-display" disabled>
+          <option>未连接</option>
+        </select>
+        <button id="logout-button" class="ghost-button" type="button">退出登录</button>
+        <div class="meta" id="connection-status">未连接</div>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <section id="chat-view" class="chat-view">
+        <aside class="conversation-pane">
+          <div class="pane-header">
+            <div class="pane-title-row">
+              <h3>会话</h3>
+              <div>
+                <button class="icon-button" type="button" title="编辑">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </button>
+                <button id="new-chat-button" class="icon-button" type="button" title="新建对话">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+            <select>
+              <option>全部配置</option>
+            </select>
+          </div>
+          <div id="conversation-list" class="conversation-list"></div>
+        </aside>
+
+        <main class="chat-pane">
+          <header class="chat-header">
+            <div class="chat-title">
+              <div class="grid-icon" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+              <div class="title-block">
+                <h2 id="chat-title">新的对话</h2>
+                <div id="current-model" class="subtle"></div>
+              </div>
+            </div>
+            <div class="header-actions">
+              <button id="new-chat-header-button" class="ghost-button" type="button">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                新建对话
+              </button>
+              <button id="back-config-button" class="icon-button" type="button" title="配置">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.4 1a7.4 7.4 0 0 0-2-1.2L14 3h-4l-.4 2.7a7.4 7.4 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.4-1a7.4 7.4 0 0 0 2 1.2L10 21h4l.4-2.7a7.4 7.4 0 0 0 2-1.2l2.4 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </header>
+
+          <section id="messages" class="messages" aria-live="polite">
+            <div class="empty-state">
+              <div>
+                <h2>Youbestar Agent</h2>
+                <div class="subtle">输入消息开始。</div>
+              </div>
+            </div>
+          </section>
+
+          <form id="chat-form" class="composer">
+            <div class="composer-toolbar">
+              <button class="icon-button" type="button" title="附件">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12.5l5.8-5.8a3 3 0 0 1 4.2 4.2L9.5 19.5a5 5 0 0 1-7.1-7.1l8.5-8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+              <button id="toggle-thought-button" class="mode-button active" type="button" title="切换思考摘要">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4a3 3 0 0 0-3 3v1.2A3.5 3.5 0 0 0 7.5 15H9v-4M15 4a3 3 0 0 1 3 3v1.2A3.5 3.5 0 0 1 16.5 15H15v-4M9 15v2a3 3 0 0 0 6 0v-2M9 8h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button id="toggle-tool-button" class="mode-button active" type="button" title="切换工具调用和工具结果">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0 4.8 5.1l-7.9 7.9a2.4 2.4 0 0 1-3.4-3.4l7.9-7.9a4 4 0 0 0-1.4-1.7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span id="mode-hint" class="mode-label">显示思考/工具调用</span>
+              <span class="composer-spacer"></span>
+              <span id="enabled-skill-count">技能 0 / 0</span>
+            </div>
+            <div class="composer-box">
+              <textarea id="message-input" placeholder="输入消息...（Enter 发送，Shift+Enter 换行）" autocomplete="off"></textarea>
+              <button id="send-button" class="primary-button" type="submit">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l17-8-8 17-2-7-7-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                发送
+              </button>
+            </div>
+          </form>
+        </main>
+      </section>
+
+      <section id="skills-view" class="skills-view" hidden>
+        <header class="skills-topbar">
+          <div class="skills-title-row">
+            <h2>技能</h2>
+            <div class="legend">
+              <span><i class="dot official"></i> 官方</span>
+              <span><i class="dot community"></i> 社区</span>
+              <span><i class="dot local"></i> 本地</span>
+            </div>
+          </div>
+          <input id="skill-search" type="search" placeholder="搜索技能...">
+        </header>
+
+        <div class="skills-layout">
+          <aside id="skills-list-pane" class="skills-list-pane"></aside>
+          <main class="skills-content">
+            <article class="doc">
+              <section class="doc-section">
+                <h1>Skills 推荐清单</h1>
+                <p>这是当前 Youbestar Agent 掌握的技能管理页。左侧每一项都是独立技能，可以打开或关闭；关闭后的技能不会出现在 Agent 提示词里，后端执行时也会再次拦截。</p>
+                <p>技能现在按命名空间注册：<code>official.*</code> 是官方维护技能，<code>community.author.*</code> 是社区共享技能，<code>local.*</code> 是你的本地技能。所有正式可调用技能都会写入 <code>agent_system/skills/registry.json</code>。</p>
+              </section>
+
+              <section id="selected-skill-detail" class="skill-detail-card"></section>
+
+              <section class="doc-section">
+                <h2>维护规范</h2>
+                <ul>
+                  <li>模型只能写入 sandbox 和测试目录，不能直接修改正式 skills。</li>
+                  <li>所有新技能必须有清晰输入输出，并提供测试用例。</li>
+                  <li>测试通过后只能提交审批请求，批准后进入 <code>skills/local</code> 并自动注册为 <code>local.*</code>。</li>
+                  <li>涉及浏览器、文件读取、外部接口的技能默认保持谨慎，必要时可随时关闭。</li>
+                </ul>
+              </section>
+
+              <section class="doc-section">
+                <h2>安全优先</h2>
+                <ul>
+                  <li>默认把未审批技能当作不可调用代码。</li>
+                  <li>读取文件仅允许白名单目录内的普通项目文件，密钥、token、auth、cookie、数据库和缓存目录会被拦截。</li>
+                  <li>ERP、微信、发布、删除、保存、提交等高风险动作不在当前技能系统中开放。</li>
+                  <li>技能开关是运行时控制项，关闭后即使模型输出对应 Action，也不会执行。</li>
+                </ul>
+              </section>
+
+              <section class="doc-section">
+                <h2>审批队列</h2>
+                <div id="approvals-body"></div>
+              </section>
+            </article>
+          </main>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <script>
+    const API_ORIGIN = "http://127.0.0.1:8000";
+    const CHAT_URL = `${API_ORIGIN}/chat`;
+    const CONFIG_URL = `${API_ORIGIN}/config`;
+    const REGISTRY_URL = `${API_ORIGIN}/skills/registry`;
+    const TOGGLE_URL = `${API_ORIGIN}/skills/toggle`;
+    const APPROVALS_URL = `${API_ORIGIN}/skills/approvals`;
+    const APPROVE_URL = `${API_ORIGIN}/skills/approve`;
+    const REJECT_URL = `${API_ORIGIN}/skills/reject`;
+
+    const configScreen = document.getElementById("config-screen");
+    const appShell = document.getElementById("app-shell");
+    const configForm = document.getElementById("config-form");
+    const configStatus = document.getElementById("config-status");
+    const loginButton = document.getElementById("login-button");
+    const apiUrlInput = document.getElementById("api-url");
+    const modelInput = document.getElementById("model-name");
+    const apiKeyInput = document.getElementById("api-key");
+    const modelDisplay = document.getElementById("model-display");
+    const currentModel = document.getElementById("current-model");
+    const connectionStatus = document.getElementById("connection-status");
+    const navChatButton = document.getElementById("nav-chat-button");
+    const navSkillsButton = document.getElementById("nav-skills-button");
+    const chatView = document.getElementById("chat-view");
+    const skillsView = document.getElementById("skills-view");
+    const conversationList = document.getElementById("conversation-list");
+    const chatTitle = document.getElementById("chat-title");
+    const messagesEl = document.getElementById("messages");
+    const chatForm = document.getElementById("chat-form");
+    const input = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+    const toggleThoughtButton = document.getElementById("toggle-thought-button");
+    const toggleToolButton = document.getElementById("toggle-tool-button");
+    const modeHint = document.getElementById("mode-hint");
+    const backConfigButton = document.getElementById("back-config-button");
+    const logoutButton = document.getElementById("logout-button");
+    const newChatButton = document.getElementById("new-chat-button");
+    const newChatHeaderButton = document.getElementById("new-chat-header-button");
+    const enabledSkillCount = document.getElementById("enabled-skill-count");
+    const skillsListPane = document.getElementById("skills-list-pane");
+    const skillSearch = document.getElementById("skill-search");
+    const selectedSkillDetail = document.getElementById("selected-skill-detail");
+    const approvalsBody = document.getElementById("approvals-body");
+
+    const conversations = [];
+    let activeConversationId = null;
+    let saveTimer = null;
+    let configSaved = false;
+    let skillsCache = [];
+    let selectedSkillName = "";
+    let showThoughtMode = true;
+    let showToolMode = true;
+
+    function getConfig() {
+      return {
+        api_url: apiUrlInput.value.trim(),
+        model: modelInput.value.trim(),
+        api_key: apiKeyInput.value.trim(),
+      };
+    }
+
+    function isConfigComplete() {
+      const config = getConfig();
+      return Boolean(config.api_url && config.model && config.api_key);
+    }
+
+    function setStatus(message, type = "") {
+      configStatus.textContent = message;
+      configStatus.className = `status ${type}`;
+    }
+
+    function updateLoginState() {
+      loginButton.disabled = !configSaved || !isConfigComplete();
+    }
+
+    async function loadConfig() {
+      try {
+        const response = await fetch(CONFIG_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取配置失败");
+        }
+
+        apiUrlInput.value = data.api_url || "https://api.openai.com/v1";
+        modelInput.value = data.model || "gpt-4o-mini";
+        apiKeyInput.value = data.api_key || "";
+        configSaved = isConfigComplete();
+        setStatus(configSaved ? "配置已加载。" : "请补全配置。", configSaved ? "success" : "");
+      } catch (error) {
+        apiUrlInput.value = "https://api.openai.com/v1";
+        modelInput.value = "gpt-4o-mini";
+        configSaved = false;
+        setStatus(`无法连接后端：${error.message}`, "error");
+      } finally {
+        updateLoginState();
+      }
+    }
+
+    async function saveConfig() {
+      if (!isConfigComplete()) {
+        configSaved = false;
+        setStatus("请补全配置。");
+        updateLoginState();
+        return false;
+      }
+
+      try {
+        const response = await fetch(CONFIG_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(getConfig()),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "保存配置失败");
+        }
+
+        configSaved = true;
+        setStatus("已保存。", "success");
+        updateLoginState();
+        return true;
+      } catch (error) {
+        configSaved = false;
+        setStatus(`保存失败：${error.message}`, "error");
+        updateLoginState();
+        return false;
+      }
+    }
+
+    function queueSaveConfig() {
+      configSaved = false;
+      updateLoginState();
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveConfig, 450);
+    }
+
+    function openApp() {
+      const config = getConfig();
+      modelDisplay.innerHTML = `<option>${escapeHtml(config.model)}</option>`;
+      currentModel.textContent = `${config.model} · ${config.api_url}`;
+      connectionStatus.textContent = "已连接";
+      configScreen.hidden = true;
+      appShell.hidden = false;
+      if (!conversations.length) {
+        createConversation();
+      }
+      showChatView();
+      loadSkills();
+      input.focus();
+    }
+
+    function showConfig() {
+      appShell.hidden = true;
+      configScreen.hidden = false;
+      apiUrlInput.focus();
+    }
+
+    function setActiveNav(active) {
+      navChatButton.classList.toggle("active", active === "chat");
+      navSkillsButton.classList.toggle("active", active === "skills");
+    }
+
+    function showChatView() {
+      chatView.hidden = false;
+      skillsView.hidden = true;
+      setActiveNav("chat");
+      renderMessages();
+    }
+
+    function showSkillsView() {
+      chatView.hidden = true;
+      skillsView.hidden = false;
+      setActiveNav("skills");
+      loadSkills();
+      loadApprovals();
+      skillSearch.focus();
+    }
+
+    function createConversation() {
+      const id = `chat-${Date.now()}`;
+      conversations.unshift({
+        id,
+        title: "新的对话",
+        subtitle: "default",
+        created: new Date(),
+        history: [],
+      });
+      activeConversationId = id;
+      renderMessages();
+      renderConversations();
+    }
+
+    function activeConversation() {
+      return conversations.find((item) => item.id === activeConversationId);
+    }
+
+    function renderConversations() {
+      conversationList.innerHTML = "";
+      conversations.forEach((conversation) => {
+        const button = document.createElement("button");
+        button.className = `conversation-card${conversation.id === activeConversationId ? " active" : ""}`;
+        button.type = "button";
+        button.addEventListener("click", () => {
+          activeConversationId = conversation.id;
+          renderConversations();
+          renderMessages();
+        });
+
+        const title = document.createElement("div");
+        title.className = "conversation-title";
+        title.textContent = conversation.title;
+
+        const sub = document.createElement("div");
+        sub.className = "conversation-sub";
+        sub.innerHTML = `<span>${escapeHtml(conversation.subtitle)}</span><span>${formatDate(conversation.created)}</span>`;
+
+        button.appendChild(title);
+        button.appendChild(sub);
+        conversationList.appendChild(button);
+      });
+    }
+
+    function renderMessages() {
+      const conversation = activeConversation();
+      chatTitle.textContent = conversation?.title || "新的对话";
+      messagesEl.innerHTML = "";
+
+      if (!conversation || !conversation.history.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.innerHTML = "<div><h2>Youbestar Agent</h2><div class=\"subtle\">输入消息开始。</div></div>";
+        messagesEl.appendChild(empty);
+        return;
+      }
+
+      conversation.history.forEach((message) => {
+        appendMessageNode(message);
+      });
+    }
+
+    function appendMessageNode(messageOrRole, content = "", error = false) {
+      const message = typeof messageOrRole === "object"
+        ? messageOrRole
+        : { role: messageOrRole, content, error };
+      const role = message.role;
+
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = role === "user" ? "U" : "A";
+
+      const bubble = document.createElement("div");
+      bubble.className = `bubble${message.error ? " error" : ""}`;
+
+      if (role === "assistant" && hasAgentTrace(message)) {
+        bubble.classList.add("assistant-rich");
+        renderAssistantBubble(bubble, message);
+      } else {
+        bubble.textContent = message.content || "";
+      }
+
+      if (role === "user") {
+        row.appendChild(bubble);
+        row.appendChild(avatar);
+      } else {
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+      }
+
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    function hasAgentTrace(message) {
+      return Boolean(
+        message.pending ||
+        message.model_reply !== undefined ||
+        message.thought !== undefined ||
+        message.action !== undefined ||
+        message.params !== undefined ||
+        message.action_result !== undefined
+      );
+    }
+
+    function renderAssistantBubble(bubble, message) {
+      bubble.innerHTML = "";
+
+      if (showThoughtMode) {
+        const thought = message.pending ? "等待模型返回思考摘要..." : (message.thought || "");
+        if (thought) {
+          const body = appendTraceCard(bubble, {
+            className: "thought-card",
+            title: "思考模式",
+            status: message.pending ? "WAIT" : "THOUGHT",
+          });
+          body.textContent = thought;
+        }
+      }
+
+      if (showToolMode) {
+        appendToolCard(bubble, message);
+      }
+
+      appendReplyCard(bubble, message.model_reply || message.content || "模型没有返回文本。");
+    }
+
+    function appendReplyCard(parent, text) {
+      const card = document.createElement("div");
+      card.className = "reply-card";
+      card.textContent = text;
+      parent.appendChild(card);
+    }
+
+    function appendTraceCard(parent, options) {
+      const card = document.createElement("section");
+      card.className = `trace-card ${options.className || ""}`.trim();
+
+      const head = document.createElement("div");
+      head.className = "trace-head";
+
+      const title = document.createElement("div");
+      title.className = "trace-title";
+      const marker = document.createElement("span");
+      marker.textContent = "›";
+      const titleText = document.createElement("span");
+      titleText.textContent = options.title;
+      title.appendChild(marker);
+      title.appendChild(titleText);
+
+      if (options.code) {
+        const code = document.createElement("code");
+        code.textContent = options.code;
+        title.appendChild(code);
+      }
+
+      const pill = document.createElement("span");
+      pill.className = "trace-pill";
+      pill.textContent = options.status;
+
+      const body = document.createElement("div");
+      body.className = "trace-body";
+
+      head.appendChild(title);
+      head.appendChild(pill);
+      card.appendChild(head);
+      card.appendChild(body);
+      parent.appendChild(card);
+      return body;
+    }
+
+    function appendToolCard(parent, message) {
+      const action = message.action || "none";
+      const result = message.pending ? "等待模型决定是否调用技能..." : (message.action_result || "无操作");
+      const hasError = /失败|错误|未知|已关闭|error/i.test(result);
+      const className = message.pending || action === "none" ? "tool-none" : (hasError ? "tool-error" : "tool-ok");
+      const status = message.pending ? "WAIT" : (action === "none" ? "NONE" : (hasError ? "ERROR" : "OK"));
+      const body = appendTraceCard(parent, {
+        className,
+        title: "Tool call",
+        code: action,
+        status,
+      });
+
+      if (message.pending || action === "none") {
+        body.textContent = result;
+        return;
+      }
+
+      const actionLine = document.createElement("div");
+      actionLine.appendChild(document.createTextNode("Action: "));
+      const code = document.createElement("code");
+      code.textContent = action;
+      actionLine.appendChild(code);
+
+      const paramsLabel = document.createElement("div");
+      paramsLabel.textContent = "Params:";
+      const paramsBlock = document.createElement("pre");
+      paramsBlock.className = "trace-block";
+      paramsBlock.textContent = formatJson(message.params || {});
+
+      const resultLabel = document.createElement("div");
+      resultLabel.textContent = "Result:";
+      const resultBlock = document.createElement("pre");
+      resultBlock.className = "trace-block";
+      resultBlock.textContent = result;
+
+      body.appendChild(actionLine);
+      body.appendChild(paramsLabel);
+      body.appendChild(paramsBlock);
+      body.appendChild(resultLabel);
+      body.appendChild(resultBlock);
+    }
+
+    function formatJson(value) {
+      try {
+        return JSON.stringify(value || {}, null, 2);
+      } catch {
+        return "{}";
+      }
+    }
+
+    function updateModeButtons() {
+      toggleThoughtButton.classList.toggle("active", showThoughtMode);
+      toggleToolButton.classList.toggle("active", showToolMode);
+      if (showThoughtMode && showToolMode) {
+        modeHint.textContent = "显示思考/工具调用";
+      } else if (showThoughtMode) {
+        modeHint.textContent = "显示思考摘要";
+      } else if (showToolMode) {
+        modeHint.textContent = "显示工具调用和结果";
+      } else {
+        modeHint.textContent = "隐藏过程信息";
+      }
+    }
+
+    function addMessage(role, content, error = false, extra = {}) {
+      if (!activeConversation()) {
+        createConversation();
+      }
+      const target = activeConversation();
+      const record = { role, content, error, ...extra };
+      target.history.push(record);
+      if (role === "user" && target.title === "新的对话") {
+        target.title = String(content).slice(0, 22);
+        chatTitle.textContent = target.title;
+        renderConversations();
+      }
+
+      const empty = messagesEl.querySelector(".empty-state");
+      if (empty) {
+        empty.remove();
+      }
+      appendMessageNode(record);
+      return record;
+    }
+
+    async function sendMessage(message) {
+      const conversation = activeConversation();
+      const previousHistory = conversation ? conversation.history.slice(-20).map((item) => ({
+        role: item.role,
+        content: item.role === "assistant" ? (item.model_reply || item.content || "") : item.content,
+      })) : [];
+
+      addMessage("user", message);
+      const loadingMessage = addMessage("assistant", "正在思考...", false, { pending: true });
+      input.disabled = true;
+      sendButton.disabled = true;
+
+      try {
+        const response = await fetch(CHAT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            history: previousHistory,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "后端请求失败");
+        }
+
+        const modelReply = data.model_reply || data.reply || "";
+        const actionResult = data.action_result || "无操作";
+        const assistantContent = `模型输出:\n${modelReply}\n\n工具执行结果:\n${actionResult}`;
+        Object.assign(loadingMessage, {
+          content: assistantContent,
+          model_reply: modelReply,
+          thought: data.thought || "",
+          action: data.action || "none",
+          params: data.params || {},
+          action_result: actionResult,
+          pending: false,
+          error: false,
+        });
+        renderMessages();
+      } catch (error) {
+        Object.assign(loadingMessage, {
+          content: `错误：${error.message}`,
+          pending: false,
+          error: true,
+        });
+        renderMessages();
+      } finally {
+        input.disabled = false;
+        sendButton.disabled = false;
+        input.focus();
+      }
+    }
+
+    async function loadSkills() {
+      try {
+        const response = await fetch(REGISTRY_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取技能失败");
+        }
+
+        skillsCache = data.skills || [];
+        if (!selectedSkillName && skillsCache.length) {
+          selectedSkillName = skillsCache[0].name;
+        }
+        renderSkills();
+      } catch (error) {
+        skillsListPane.innerHTML = `<div class="status error">读取失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function groupSkills(skills) {
+      return skills.reduce((groups, skill) => {
+        const key = skill.type || "other";
+        groups[key] = groups[key] || [];
+        groups[key].push(skill);
+        return groups;
+      }, {});
+    }
+
+    function groupTitle(type) {
+      return {
+        official: "OFFICIAL",
+        community: "COMMUNITY",
+        local: "LOCAL",
+      }[type] || type.toUpperCase();
+    }
+
+    function renderSkills() {
+      const keyword = skillSearch.value.trim().toLowerCase();
+      const filtered = skillsCache.filter((skill) => {
+        const text = `${skill.name} ${skill.title} ${skill.description} ${skill.type}`.toLowerCase();
+        return !keyword || text.includes(keyword);
+      });
+      const enabledCount = skillsCache.filter((skill) => skill.enabled).length;
+      enabledSkillCount.textContent = `技能 ${enabledCount} / ${skillsCache.length}`;
+
+      skillsListPane.innerHTML = "";
+      const grouped = groupSkills(filtered);
+      Object.keys(grouped).forEach((type) => {
+        const group = document.createElement("section");
+        group.className = "skill-group";
+
+        const header = document.createElement("div");
+        header.className = "skill-group-header";
+        header.innerHTML = `<span>${escapeHtml(groupTitle(type))}</span><span class="count-pill">${grouped[type].length}</span>`;
+        group.appendChild(header);
+
+        grouped[type].forEach((skill) => {
+          group.appendChild(createSkillRow(skill));
+        });
+        skillsListPane.appendChild(group);
+      });
+
+      if (!filtered.length) {
+        skillsListPane.innerHTML = "<div class=\"subtle\" style=\"padding: 16px;\">没有匹配的技能。</div>";
+      }
+
+      renderSelectedSkillDetail();
+    }
+
+    function createSkillRow(skill) {
+      const row = document.createElement("button");
+      row.className = `skill-row${skill.name === selectedSkillName ? " active" : ""}`;
+      row.type = "button";
+      row.addEventListener("click", () => {
+        selectedSkillName = skill.name;
+        renderSkills();
+      });
+
+      const info = document.createElement("div");
+      info.innerHTML = `
+        <div class="skill-name"><span class="dot ${escapeHtml(skill.type)}"></span><span>${escapeHtml(skill.title || skill.name)}</span></div>
+        <div class="skill-desc">${escapeHtml(skill.description || skill.name)}</div>
+      `;
+
+      const label = document.createElement("label");
+      label.className = "switch";
+      label.addEventListener("click", (event) => event.stopPropagation());
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = Boolean(skill.enabled);
+      checkbox.addEventListener("change", () => toggleSkill(skill.name, checkbox.checked));
+      const slider = document.createElement("span");
+      slider.className = "slider";
+      label.appendChild(checkbox);
+      label.appendChild(slider);
+
+      row.appendChild(info);
+      row.appendChild(label);
+      return row;
+    }
+
+    function renderSelectedSkillDetail() {
+      const skill = skillsCache.find((item) => item.name === selectedSkillName) || skillsCache[0];
+      if (!skill) {
+        selectedSkillDetail.innerHTML = "<div class=\"subtle\">暂无技能详情。</div>";
+        return;
+      }
+
+      selectedSkillName = skill.name;
+      selectedSkillDetail.innerHTML = `
+        <div class="skill-head">
+          <div>
+            <h2>${escapeHtml(skill.title || skill.name)}</h2>
+            <div class="meta">${escapeHtml(skill.name)}</div>
+          </div>
+          <span class="skill-type">${escapeHtml(skill.type)}</span>
+        </div>
+        <p>${escapeHtml(skill.description || "")}</p>
+        <div class="skill-detail-grid">
+          <div><div class="meta">状态</div><strong>${skill.enabled ? "已开启" : "已关闭"}</strong></div>
+          <div><div class="meta">来源</div><strong>${escapeHtml(skill.source || "local")}</strong></div>
+          <div><div class="meta">版本</div><strong>${escapeHtml(skill.version || "dev")}</strong></div>
+          <div><div class="meta">调用方式</div><strong>Action: ${escapeHtml(skill.name)}</strong></div>
+          <div><div class="meta">文件</div><strong>${escapeHtml(skill.path || "registry")}</strong></div>
+        </div>
+      `;
+    }
+
+    async function toggleSkill(name, enabled) {
+      try {
+        const response = await fetch(TOGGLE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, enabled }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "切换失败");
+        }
+        await loadSkills();
+      } catch (error) {
+        selectedSkillDetail.insertAdjacentHTML("afterbegin", `<div class="status error">切换失败：${escapeHtml(error.message)}</div>`);
+        await loadSkills();
+      }
+    }
+
+    async function loadApprovals() {
+      approvalsBody.innerHTML = "<div class=\"subtle\">正在读取...</div>";
+      try {
+        const response = await fetch(APPROVALS_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取审批记录失败");
+        }
+        renderApprovals(data.approvals || []);
+      } catch (error) {
+        approvalsBody.innerHTML = `<div class="status error">读取失败：${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    function renderApprovals(approvals) {
+      approvalsBody.innerHTML = "";
+      if (!approvals.length) {
+        approvalsBody.innerHTML = "<div class=\"subtle\">暂无审批记录。</div>";
+        return;
+      }
+
+      approvals.slice().reverse().forEach((record) => {
+        const card = document.createElement("article");
+        card.className = "approval-card";
+        card.innerHTML = `
+          <div class="approval-head">
+            <div>
+              <h3>${escapeHtml(record.skill_name)}</h3>
+              <div class="meta">${escapeHtml(record.status)}</div>
+            </div>
+            <div class="skill-type">${escapeHtml(record.tests_passed ? "tested" : "untested")}</div>
+          </div>
+          <div class="meta">文件：${escapeHtml(record.file || "")}</div>
+          <div class="meta">说明：${escapeHtml(record.description || "")}</div>
+        `;
+
+        if (record.status === "pending") {
+          const actions = document.createElement("div");
+          actions.className = "approval-actions";
+
+          const approve = document.createElement("button");
+          approve.className = "primary-button";
+          approve.type = "button";
+          approve.textContent = "批准";
+          approve.addEventListener("click", () => reviewSkill(APPROVE_URL, record));
+
+          const reject = document.createElement("button");
+          reject.className = "danger-button";
+          reject.type = "button";
+          reject.textContent = "拒绝";
+          reject.addEventListener("click", () => reviewSkill(REJECT_URL, record));
+
+          actions.appendChild(approve);
+          actions.appendChild(reject);
+          card.appendChild(actions);
+        }
+
+        approvalsBody.appendChild(card);
+      });
+    }
+
+    async function reviewSkill(url, record) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            skill_name: record.skill_name,
+            file: record.file,
+            reviewer: "web",
+            note: "",
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail));
+        }
+        await loadApprovals();
+        await loadSkills();
+      } catch (error) {
+        approvalsBody.insertAdjacentHTML("afterbegin", `<div class="status error">处理失败：${escapeHtml(error.message)}</div>`);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatDate(date) {
+      const now = new Date();
+      if (date.toDateString() === now.toDateString()) {
+        return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+      }
+      return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+    }
+
+    [apiUrlInput, modelInput, apiKeyInput].forEach((field) => {
+      field.addEventListener("input", queueSaveConfig);
+    });
+
+    configForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (await saveConfig()) {
+        openApp();
+      }
+    });
+
+    chatForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) {
+        return;
+      }
+      input.value = "";
+      sendMessage(message);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        chatForm.requestSubmit();
+      }
+    });
+
+    skillSearch.addEventListener("input", renderSkills);
+    navChatButton.addEventListener("click", showChatView);
+    navSkillsButton.addEventListener("click", showSkillsView);
+    backConfigButton.addEventListener("click", showConfig);
+    logoutButton.addEventListener("click", showConfig);
+    newChatButton.addEventListener("click", createConversation);
+    newChatHeaderButton.addEventListener("click", createConversation);
+    toggleThoughtButton.addEventListener("click", () => {
+      showThoughtMode = !showThoughtMode;
+      updateModeButtons();
+      renderMessages();
+    });
+    toggleToolButton.addEventListener("click", () => {
+      showToolMode = !showToolMode;
+      updateModeButtons();
+      renderMessages();
+    });
+
+    updateModeButtons();
+    loadConfig();
+  </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "official.open_browser": {
+    "path": "agent_system/skills/official/open_browser.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "打开浏览器",
+    "description": "根据 URL 打开系统默认浏览器。",
+    "author": "youbestar"
+  },
+  "official.write_skill": {
+    "path": "agent_system/skills/official/write_skill.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "写入 Sandbox 技能",
+    "description": "只允许把新技能代码写入 agent_system/sandbox。",
+    "author": "youbestar"
+  },
+  "official.write_skill_test": {
+    "path": "agent_system/skills/official/write_skill_test.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "写入技能测试",
+    "description": "为 sandbox 技能写入受控测试用例。",
+    "author": "youbestar"
+  },
+  "official.request_skill_approval": {
+    "path": "agent_system/skills/official/request_skill_approval.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "提交技能审批",
+    "description": "测试通过后提交人工审批请求。",
+    "author": "youbestar"
+  },
+  "official.list_files": {
+    "path": "agent_system/skills/official/list_files.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "列出白名单文件",
+    "description": "列出受控白名单目录内的普通项目文件。",
+    "author": "youbestar"
+  },
+  "official.read_file": {
+    "path": "agent_system/skills/official/read_file.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "读取白名单文件",
+    "description": "读取受控白名单目录内的普通文本或代码文件。",
+    "author": "youbestar"
+  }
+}
