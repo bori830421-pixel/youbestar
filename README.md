@@ -7,6 +7,7 @@ Youbestar Agent 是一个最小可运行、可扩展的本地 AI Agent 框架。
 - FastAPI 后端
 - 浏览器 HTML 前端
 - 网页端模型配置保存
+- 闲聊模式 / 任务优先模式切换
 - OpenAI-compatible `/v1` 云端模型接口
 - 受控技能系统
 - 技能命名空间与注册表
@@ -49,6 +50,34 @@ youbestar.json
 ```
 
 注意：`youbestar.json` 可能包含 API Key，已经被 `.gitignore` 忽略，不要上传到 GitHub。
+
+## 对话模式
+
+聊天窗口提供一个“允许闲聊”开关：
+
+- 开启：Chat On，模型可以输出自然语言回复，也可以调用技能。
+- 关闭：Chat Off，任务优先，模型只能输出 `Thought / Action / Params`，不能输出自然闲聊。
+
+前端请求 `/chat` 时会传：
+
+```json
+{
+  "message": "你好",
+  "allowChat": true
+}
+```
+
+后端会根据 `allowChat` 改写 prompt，并返回结构化字段：
+
+```json
+{
+  "thought": "...",
+  "action": "official.open_browser",
+  "params": {},
+  "action_result": "无操作",
+  "response": "你好！"
+}
+```
 
 ## 核心目录
 
@@ -169,7 +198,9 @@ github_sync.bat
 当前测试覆盖：
 
 - Agent 输出解析
+- 可选 `Response` 解析
+- 命名空间 Action 解析
+- `allowChat` 模式 prompt
 - 命名空间技能注册
 - 注册表加载并执行技能
 - 未注册 Action 的处理
-

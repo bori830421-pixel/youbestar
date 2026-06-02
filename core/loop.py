@@ -19,7 +19,7 @@ def normalize_action_name(action: str) -> str:
         return action
 
 
-def build_agent_prompt(memory: Memory, user_input: str) -> str:
+def build_agent_prompt(memory: Memory, user_input: str, allow_chat: bool = True) -> str:
     enabled_tools = enabled_builtin_skill_names()
     tool_names = ", ".join(enabled_tools) if enabled_tools else "暂无"
     disabled_tools = [name for name in BUILTIN_SKILLS if name not in enabled_tools]
@@ -30,9 +30,46 @@ def build_agent_prompt(memory: Memory, user_input: str) -> str:
     registered_skills = enabled_approved_skill_names()
     registered_skill_text = ", ".join(registered_skills) if registered_skills else "暂无"
     history = memory.get_summary() or "暂无"
+    mode_rules = (
+        """
+当 allowChat=True 时：
+- 你可以自然回复用户。
+- 如果用户只是问候、闲聊、讨论想法或询问状态，Action: none，Params: {}，并使用 Response 输出自然回复。
+- 如果用户有工具需求，仍然必须输出 Thought/Action/Params；必要时可额外用 Response 简短说明结果或下一步。
+- 允许输出 Response 字段。
+""".strip()
+        if allow_chat
+        else """
+当 allowChat=False 时：
+- 你不能进行自然闲聊。
+- 你必须忽略与任务无关的闲聊表达。
+- 你只能输出 Thought/Action/Params。
+- 如果用户没有工具需求，请输出 Action: none，Params: {}，不要写 Response，也不要写自然回复。
+- 禁止输出 Response 字段。
+""".strip()
+    )
+    output_format = (
+        """
+Thought: 简短说明你如何判断是否需要工具
+Action: 命名空间技能名或 none
+Params: JSON
+Response: 只有 allowChat=True 时才允许出现的自然语言回复
+""".strip()
+        if allow_chat
+        else """
+Thought: 简短说明你如何判断是否需要工具
+Action: 命名空间技能名或 none
+Params: JSON
+""".strip()
+    )
 
     return f"""
 你是一个自动化 Agent，也是一个可控进化 Agent。你需要根据用户输入决定是否调用工具。
+
+当前模式:
+allowChat={str(allow_chat)}
+
+{mode_rules}
 
 用户输入:
 {user_input}
@@ -72,23 +109,24 @@ def build_agent_prompt(memory: Memory, user_input: str) -> str:
 6. 如果用户没有要求工具操作，Action 使用 none，Params 使用 {{}}。
 7. 目前已开启的官方技能只有: {tool_names}。
 8. 当有工具操作需要时，必须输出 Action + Params。
-9. 如果用户只是问候或闲聊，Action: none，Params: {{}}。
-10. 如果用户提出工具操作请求，Action 选择对应已开启技能，Params 填该技能需要的参数。
-11. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
+9. 如果 allowChat=True 且用户只是问候或闲聊，Action: none，Params: {{}}，Response 输出自然回复。
+10. 如果 allowChat=False 且用户只是问候或闲聊，Action: none，Params: {{}}，禁止自然回复。
+11. 如果用户提出工具操作请求，Action 选择对应已开启技能，Params 填该技能需要的参数。
+12. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
 
-Thought: 简短说明你如何判断是否需要工具
-Action: 命名空间技能名或 none
-Params: JSON
+行为格式严格要求:
+{output_format}
 """.strip()
 
 
-def agent_loop(llm, memory: Memory, user_input: str) -> tuple[str, str, str, dict, str]:
-    prompt = build_agent_prompt(memory, user_input)
+def agent_loop(llm, memory: Memory, user_input: str, allow_chat: bool = True) -> tuple[str, str, str, dict, str, str]:
+    prompt = build_agent_prompt(memory, user_input, allow_chat)
     response = llm.chat(prompt)
     parsed = parse_agent_output(response)
     thought = parsed["thought"]
     action = normalize_action_name(parsed["action"])
     params = parsed["params"]
+    user_response = parsed["response"] if allow_chat else ""
 
     result = "无操作"
     if action != "none":
@@ -100,4 +138,4 @@ def agent_loop(llm, memory: Memory, user_input: str) -> tuple[str, str, str, dic
             result = run_approved_skill(action, params)
 
     memory.add(user_input, action, result)
-    return response, thought, action, params, result
+    return response, thought, action, params, result, user_response

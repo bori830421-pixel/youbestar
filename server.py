@@ -21,6 +21,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = Field(default_factory=list)
+    allowChat: bool = True
 
 
 class ChatResponse(BaseModel):
@@ -30,6 +31,7 @@ class ChatResponse(BaseModel):
     action: str
     params: dict[str, object]
     action_result: str
+    response: str
 
 
 class ConfigSaveResponse(BaseModel):
@@ -79,13 +81,21 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     try:
         llm = LLM(load_config())
-        model_reply, thought, action, params, action_result = agent_loop(llm, memory, user_message)
+        model_reply, thought, action, params, action_result, user_response = agent_loop(
+            llm,
+            memory,
+            user_message,
+            request.allowChat,
+        )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail=f"Model API request failed: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    reply = f"模型输出:\n{model_reply}\n\n工具执行结果:\n{action_result}"
+    reply_parts = [f"模型输出:\n{model_reply}", f"工具执行结果:\n{action_result}"]
+    if user_response:
+        reply_parts.append(f"用户回复:\n{user_response}")
+    reply = "\n\n".join(reply_parts)
     return ChatResponse(
         reply=reply,
         model_reply=model_reply,
@@ -93,4 +103,5 @@ def chat(request: ChatRequest) -> ChatResponse:
         action=action,
         params=params,
         action_result=action_result,
+        response=user_response,
     )
