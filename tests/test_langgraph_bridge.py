@@ -30,7 +30,7 @@ class LangGraphBridgeTest(unittest.TestCase):
         second = self.bridge.invoke(llm, "再问一次", True, "thread-no-action")
         other_thread = self.bridge.invoke(llm, "全新线程", True, "thread-other")
 
-        self.assertEqual(first["graph_nodes"], ["plan", "no_action", "finish"])
+        self.assertEqual(first["graph_nodes"], ["plan", "no_action", "reflect", "finish"])
         self.assertEqual(first["turn_count"], 1)
         self.assertEqual(first["action_result"], "无操作")
         self.assertEqual(first["response"], "你好！")
@@ -56,7 +56,7 @@ class LangGraphBridgeTest(unittest.TestCase):
 
         result = self.bridge.invoke(llm, "打开百度", False, "thread-tool")
 
-        self.assertEqual(result["graph_nodes"], ["plan", "execute_skill", "finish"])
+        self.assertEqual(result["graph_nodes"], ["plan", "execute_skill", "reflect", "finish"])
         self.assertEqual(result["action"], "official.open_browser")
         self.assertEqual(result["action_result"], "技能执行完成")
         self.assertEqual(result["response"], "")
@@ -66,6 +66,49 @@ class LangGraphBridgeTest(unittest.TestCase):
         )
         approved_mock.assert_called_once_with("official.open_browser")
         enabled_mock.assert_called_once_with("official.open_browser")
+
+    @patch("core.langgraph_bridge.run_approved_skill", return_value="汕头未来1天天气预报")
+    @patch("core.langgraph_bridge.is_skill_enabled", return_value=True)
+    @patch("core.langgraph_bridge.is_approved_skill", return_value=True)
+    def test_tool_result_is_bridged_to_response_when_chat_is_allowed(
+        self,
+        approved_mock,
+        enabled_mock,
+        run_mock,
+    ):
+        llm = FakeLLM(
+            "Thought: 用户查询天气。\n"
+            "Action: official.query_weather\n"
+            'Params: {"city": "汕头", "days": 1}'
+        )
+
+        result = self.bridge.invoke(llm, "汕头天气", True, "thread-weather")
+
+        self.assertEqual(result["action"], "official.query_weather")
+        self.assertEqual(result["action_result"], "汕头未来1天天气预报")
+        self.assertEqual(result["response"], "汕头未来1天天气预报")
+        run_mock.assert_called_once_with(
+            "official.query_weather",
+            {"city": "汕头", "days": 1},
+        )
+        approved_mock.assert_called_once_with("official.query_weather")
+        enabled_mock.assert_called_once_with("official.query_weather")
+
+    def test_reflect_turns_failed_tool_result_into_natural_response(self):
+        llm = FakeLLM(
+            "Thought: 用户想调用一个不存在的技能。\n"
+            "Action: local.missing_skill\n"
+            "Params: {}"
+        )
+
+        result = self.bridge.invoke(llm, "调用 missing skill", True, "thread-missing-skill")
+
+        self.assertEqual(result["graph_nodes"], ["plan", "execute_skill", "reflect", "finish"])
+        self.assertEqual(result["action"], "local.missing_skill")
+        self.assertEqual(result["action_result"], "未知工具：local.missing_skill")
+        self.assertIn("没有成功", result["response"])
+        self.assertIn("未知工具：local.missing_skill", result["response"])
+        self.assertIn("创建、启用对应技能", result["response"])
 
 
 if __name__ == "__main__":

@@ -88,7 +88,12 @@ def utc_now() -> str:
 
 
 def to_relative(path: Path) -> str:
-    return str(path.resolve().relative_to(PROJECT_ROOT)).replace("\\", "/")
+    for candidate, root in ((Path(path), PROJECT_ROOT), (Path(path).resolve(), PROJECT_ROOT.resolve())):
+        try:
+            return str(candidate.relative_to(root)).replace("\\", "/")
+        except ValueError:
+            continue
+    raise ValueError(f"{path} is not inside {PROJECT_ROOT}")
 
 
 def validate_skill_name(skill_name: str) -> str:
@@ -277,7 +282,7 @@ def register_skill(
     if not skill_path.exists():
         raise HTTPException(status_code=404, detail="技能文件不存在，不能注册。")
 
-    if clean_source in {"community", "local"}:
+    if clean_source == "community":
         assert_code_safe(skill_path.read_text(encoding="utf-8"))
 
     registry = load_skill_registry()
@@ -293,6 +298,46 @@ def register_skill(
     registry[skill_id] = record
     save_skill_registry(registry)
     return record
+
+
+def install_local_skill(
+    skill_name: str,
+    code: str,
+    description: str = "",
+    title: str = "",
+    version: str = "dev",
+    overwrite: bool = True,
+) -> dict[str, Any]:
+    ensure_agent_dirs()
+    skill_id = normalize_skill_id(skill_name)
+    if skill_source(skill_id) != "local":
+        raise HTTPException(status_code=400, detail="自主安装技能只能使用 local 命名空间。")
+
+    clean_code = code.strip()
+    if not clean_code:
+        raise HTTPException(status_code=400, detail="技能代码不能为空。")
+
+    skill_path = skill_file_path(skill_id)
+    if skill_path.exists() and not overwrite:
+        raise HTTPException(status_code=400, detail="同名 local 技能已存在。")
+
+    skill_path.parent.mkdir(parents=True, exist_ok=True)
+    skill_path.write_text(clean_code + "\n", encoding="utf-8")
+    record = register_skill(
+        skill_id,
+        skill_path,
+        version=version,
+        source="local",
+        description=description,
+        author="autonomous-agent",
+        title=title or skill_id,
+    )
+    return {
+        "status": "installed",
+        "skill_name": skill_id,
+        "file": record["path"],
+        "registry": record,
+    }
 
 
 def load_approvals() -> list[dict[str, Any]]:
@@ -509,7 +554,7 @@ def run_approved_skill(skill_name: str, params: dict[str, Any]) -> Any:
     skill_path = resolve_registered_skill_path(record)
     if not skill_path.exists():
         raise HTTPException(status_code=404, detail="技能文件不存在。")
-    if record.get("source") in {"community", "local"}:
+    if record.get("source") == "community":
         assert_code_safe(skill_path.read_text(encoding="utf-8"))
 
     module_name = f"registered_skill_{skill_id.replace('.', '_')}"

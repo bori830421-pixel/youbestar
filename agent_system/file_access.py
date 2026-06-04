@@ -73,6 +73,7 @@ DENIED_NAME_KEYWORDS = {
 MAX_LIST_ITEMS = 300
 MAX_READ_BYTES = 200_000
 MAX_RETURN_CHARS = 40_000
+MAX_WRITE_BYTES = 200_000
 
 
 def normalize_path(path: str | None) -> Path:
@@ -215,6 +216,41 @@ def read_allowed_file(path: str) -> dict[str, Any]:
     }
 
 
+def ensure_path_writable(path: Path) -> None:
+    ensure_allowed_root(path)
+    if is_denied_by_name(path):
+        raise HTTPException(status_code=403, detail="该路径命中敏感文件或敏感目录规则，禁止写入。")
+    if not extension_allowed(path):
+        raise HTTPException(status_code=403, detail="该文件类型不在允许写入范围内。")
+    if path.exists() and not path.is_file():
+        raise HTTPException(status_code=400, detail="只能写入普通文件。")
+    parent = path.parent
+    if is_denied_by_name(parent):
+        raise HTTPException(status_code=403, detail="目标目录命中敏感目录规则，禁止写入。")
+    ensure_allowed_root(parent.resolve())
+
+
+def write_allowed_file(path: str, content: str, overwrite: bool = False) -> dict[str, Any]:
+    target = normalize_path(path)
+    ensure_path_writable(target)
+
+    encoded = content.encode("utf-8")
+    if len(encoded) > MAX_WRITE_BYTES:
+        raise HTTPException(status_code=413, detail=f"写入内容过大，最大允许 {MAX_WRITE_BYTES} bytes。")
+    if target.exists() and not overwrite:
+        raise HTTPException(status_code=409, detail="文件已存在；如需覆盖请设置 overwrite=true。")
+
+    existed = target.exists()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    return {
+        "path": str(target),
+        "size": len(encoded),
+        "created": not existed,
+        "overwrite": overwrite,
+    }
+
+
 def read_policy() -> dict[str, Any]:
     return {
         "allowed_read_roots": [str(root) for root in ALLOWED_READ_ROOTS],
@@ -224,5 +260,6 @@ def read_policy() -> dict[str, Any]:
         "denied_name_keywords": sorted(DENIED_NAME_KEYWORDS),
         "max_list_items": MAX_LIST_ITEMS,
         "max_read_bytes": MAX_READ_BYTES,
+        "max_write_bytes": MAX_WRITE_BYTES,
         "max_return_chars": MAX_RETURN_CHARS,
     }

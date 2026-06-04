@@ -7,6 +7,14 @@
     "description": "根据 URL 打开系统默认浏览器。",
     "author": "youbestar"
   },
+  "official.query_weather": {
+    "path": "agent_system/skills/official/query_weather.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "查询天气",
+    "description": "根据城市名快速查询未来 1-7 天天气预报。",
+    "author": "youbestar"
+  },
   "official.write_skill": {
     "path": "agent_system/skills/official/write_skill.py",
     "version": "1.0.0",
@@ -31,6 +39,14 @@
     "description": "测试通过后提交人工审批请求。",
     "author": "youbestar"
   },
+  "official.install_local_skill": {
+    "path": "agent_system/skills/official/install_local_skill.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "自主安装本地技能",
+    "description": "直接写入或覆盖 skills/local 下的 local.* 技能并注册。",
+    "author": "youbestar"
+  },
   "official.list_files": {
     "path": "agent_system/skills/official/list_files.py",
     "version": "1.0.0",
@@ -45,6 +61,14 @@
     "source": "official",
     "title": "读取白名单文件",
     "description": "读取受控白名单目录内的普通文本或代码文件。",
+    "author": "youbestar"
+  },
+  "official.write_project_file": {
+    "path": "agent_system/skills/official/write_project_file.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "写入项目文件",
+    "description": "在项目白名单目录内写入普通文本或代码文件，可用于修改运行目录内的项目文件。",
     "author": "youbestar"
   }
 }

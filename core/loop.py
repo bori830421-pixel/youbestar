@@ -36,6 +36,7 @@ def build_agent_prompt(memory: Memory, user_input: str, allow_chat: bool = True)
 - 你可以自然回复用户。
 - 如果用户只是问候、闲聊、讨论想法或询问状态，Action: none，Params: {}，并使用 Response 输出自然回复。
 - 如果用户有工具需求，仍然必须输出 Thought/Action/Params；必要时可额外用 Response 简短说明结果或下一步。
+- Response 是用户直接看到的最终回答，要自然、简洁、温暖，不要提 Thought、Action、Params 或内部工具流程。
 - 允许输出 Response 字段。
 """.strip()
         if allow_chat
@@ -93,30 +94,40 @@ allowChat={str(allow_chat)}
 {history}
 
 权限规则:
-1. 你可以创建新的技能，但只能写入 sandbox。
-2. 你可以提供测试用例，并提交审批请求。
-3. 你不能修改已有 skills，不能操作系统文件，不能调用 ERP/微信，不能删除文件。
-4. 未批准技能不能被当作正式工具调用。
-5. 所有技能必须输入输出清晰，测试通过后才能申请审批。
-6. 你可以读取白名单目录内的普通项目文件，但不能读取密钥、token、auth、cookie、数据库、虚拟环境、缓存或浏览器 profile。
+1. 你可以自主创建、更新并注册 local.* 技能。
+2. 创建或更新本地技能时，优先使用 official.install_local_skill。
+3. official.install_local_skill 会直接写入 skills/local 并注册为正式可调用技能，不需要人工审批。
+4. 你仍然不能读取密钥、token、auth、cookie、数据库、虚拟环境、缓存或浏览器 profile。
+5. 不要主动删除用户文件；如果必须做高风险破坏性操作，先在 Response 里说明风险并等待用户确认。
+6. 你可以读取白名单目录内的普通项目文件。
+7. 你可以使用 official.write_project_file 写入运行目录内的普通项目文件，但不能写入密钥、配置密钥、虚拟环境、Git 内部目录或敏感路径。
 
 规则:
 1. 如果用户要求打开网页、打开网站、打开百度等，使用 official.open_browser。
-2. 如果用户要求创建新技能，按顺序使用 official.write_skill、official.write_skill_test、official.request_skill_approval。
-3. 新建并提交审批的用户技能名必须使用 local.skill_name，例如 local.parse_order。
-4. 如果用户要求调用已注册且已开启的技能，Action 必须使用完整命名空间。
-5. 如果用户询问“你掌握了哪些技能/你会什么”，直接列出当前已开启官方技能和社区/本地技能，Action 使用 none。
-6. 如果用户没有要求工具操作，Action 使用 none，Params 使用 {{}}。
-7. 目前已开启的官方技能只有: {tool_names}。
-8. 当有工具操作需要时，必须输出 Action + Params。
-9. 如果 allowChat=True 且用户只是问候或闲聊，Action: none，Params: {{}}，Response 输出自然回复。
-10. 如果 allowChat=False 且用户只是问候或闲聊，Action: none，Params: {{}}，禁止自然回复。
-11. 如果用户提出工具操作请求，Action 选择对应已开启技能，Params 填该技能需要的参数。
-12. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
+2. 如果用户要求查询天气、天气预报、气温、下雨情况等，使用 official.query_weather，Params 至少包含 city，可选 days。
+3. 如果用户要求创建或改进技能，使用 official.install_local_skill，Params 包含 skill_name、code、description，可选 title、version、overwrite。
+4. 如果用户要求你直接在运行目录、项目目录或指定普通文件中写入/修改内容，使用 official.write_project_file，Params 包含 path、content，可选 overwrite。
+5. 新建或更新的用户技能名必须使用 local.skill_name，例如 local.parse_order。
+6. 如果用户要求调用已注册且已开启的技能，Action 必须使用完整命名空间。
+7. 如果用户询问“你掌握了哪些技能/你会什么”，直接列出当前已开启官方技能和社区/本地技能，Action 使用 none。
+8. 如果用户没有要求工具操作，Action 使用 none，Params 使用 {{}}。
+9. 目前已开启的官方技能只有: {tool_names}。
+10. 当有工具操作需要时，必须输出 Action + Params。
+11. 如果 allowChat=True 且用户只是问候或闲聊，Action: none，Params: {{}}，Response 输出自然回复。
+12. 如果 allowChat=False 且用户只是问候或闲聊，Action: none，Params: {{}}，禁止自然回复。
+13. 如果用户提出工具操作请求，Action 选择对应已开启技能，Params 填该技能需要的参数。
+14. Response 是对用户说的话，不要写成日志、协议说明或“我判断为...”。
+15. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
 
 行为格式严格要求:
 {output_format}
 """.strip()
+
+
+def bridge_tool_result_to_response(action: str, result: str, response: str, allow_chat: bool) -> str:
+    if not allow_chat or action == "none" or response:
+        return response if allow_chat else ""
+    return result
 
 
 def agent_loop(llm, memory: Memory, user_input: str, allow_chat: bool = True) -> tuple[str, str, str, dict, str, str]:
@@ -137,5 +148,6 @@ def agent_loop(llm, memory: Memory, user_input: str, allow_chat: bool = True) ->
         else:
             result = run_approved_skill(action, params)
 
+    user_response = bridge_tool_result_to_response(action, str(result), user_response, allow_chat)
     memory.add(user_input, action, result)
     return response, thought, action, params, result, user_response

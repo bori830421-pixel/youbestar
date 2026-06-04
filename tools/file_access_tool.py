@@ -1,4 +1,4 @@
-from agent_system.file_access import list_allowed_files, read_allowed_file
+from agent_system.file_access import list_allowed_files, read_allowed_file, write_allowed_file
 
 
 def list_files(params: dict) -> str:
@@ -19,3 +19,12 @@ def read_file(params: dict) -> str:
     result = read_allowed_file(params.get("path", ""))
     suffix = "\n\n[内容已截断]" if result["truncated"] else ""
     return f"file: {result['path']}\nsize: {result['size']} bytes\n\n{result['content']}{suffix}"
+
+
+def write_project_file(params: dict) -> str:
+    result = write_allowed_file(
+        path=params.get("path", ""),
+        content=str(params.get("content", "")),
+        overwrite=bool(params.get("overwrite", False)),
+    )
+    return f"已写入项目文件：{result['path']} ({result['size']} bytes)"

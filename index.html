@@ -1421,14 +1421,16 @@
     const selectedSkillDetail = document.getElementById("selected-skill-detail");
     const approvalsBody = document.getElementById("approvals-body");
 
+    const CONVERSATION_STORAGE_KEY = "youbestar.conversations.v1";
+    const ACTIVE_CONVERSATION_STORAGE_KEY = "youbestar.activeConversationId.v1";
     const conversations = [];
     let activeConversationId = null;
     let saveTimer = null;
     let configSaved = false;
     let skillsCache = [];
     let selectedSkillName = "";
-    let showThoughtMode = true;
-    let showToolMode = true;
+    let showThoughtMode = false;
+    let showToolMode = false;
 
     function getConfig() {
       return {
@@ -1572,6 +1574,7 @@
     }
 
     function openApp() {
+      loadStoredConversations();
       const config = getConfig();
       modelDisplay.innerHTML = `<option>${escapeHtml(config.model)}</option>`;
       currentModel.textContent = `${config.model} · ${config.api_url}`;
@@ -1584,6 +1587,65 @@
       showChatView();
       loadSkills();
       input.focus();
+    }
+
+    function loadStoredConversations() {
+      if (conversations.length) {
+        return;
+      }
+
+      try {
+        const rawConversations = localStorage.getItem(CONVERSATION_STORAGE_KEY);
+        const storedConversations = rawConversations ? JSON.parse(rawConversations) : [];
+        const normalizedConversations = Array.isArray(storedConversations)
+          ? storedConversations.map(normalizeStoredConversation).filter(Boolean)
+          : [];
+
+        conversations.splice(0, conversations.length, ...normalizedConversations);
+        const storedActiveId = localStorage.getItem(ACTIVE_CONVERSATION_STORAGE_KEY);
+        activeConversationId = conversations.some((item) => item.id === storedActiveId)
+          ? storedActiveId
+          : (conversations[0]?.id || null);
+      } catch {
+        conversations.splice(0, conversations.length);
+        activeConversationId = null;
+      }
+    }
+
+    function normalizeStoredConversation(item) {
+      if (!item || typeof item !== "object" || !item.id) {
+        return null;
+      }
+
+      return {
+        id: String(item.id),
+        title: String(item.title || "新的对话"),
+        subtitle: String(item.subtitle || "default"),
+        created: item.created ? new Date(item.created) : new Date(),
+        history: Array.isArray(item.history)
+          ? item.history.filter((message) => message && typeof message === "object" && !message.pending)
+          : [],
+      };
+    }
+
+    function saveStoredConversations() {
+      try {
+        const serializableConversations = conversations.map((conversation) => ({
+          ...conversation,
+          created: conversation.created instanceof Date
+            ? conversation.created.toISOString()
+            : new Date(conversation.created || Date.now()).toISOString(),
+          history: conversation.history.filter((message) => !message.pending),
+        }));
+        localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(serializableConversations));
+        if (activeConversationId) {
+          localStorage.setItem(ACTIVE_CONVERSATION_STORAGE_KEY, activeConversationId);
+        } else {
+          localStorage.removeItem(ACTIVE_CONVERSATION_STORAGE_KEY);
+        }
+      } catch {
+        // localStorage can be unavailable or full; chat should still work in memory.
+      }
     }
 
     function showConfig() {
@@ -1623,6 +1685,7 @@
         history: [],
       });
       activeConversationId = id;
+      saveStoredConversations();
       renderMessages();
       renderConversations();
     }
@@ -1639,6 +1702,7 @@
         button.type = "button";
         button.addEventListener("click", () => {
           activeConversationId = conversation.id;
+          saveStoredConversations();
           renderConversations();
           renderMessages();
         });
@@ -1727,6 +1791,17 @@
     function renderAssistantBubble(bubble, message) {
       bubble.innerHTML = "";
 
+      if (message.pending) {
+        appendReplyCard(bubble, "正在思考...");
+      } else {
+        const finalReply = message.response || message.reply || message.content || "";
+        if (finalReply) {
+          appendReplyCard(bubble, finalReply);
+        } else if (!showThoughtMode && !showToolMode) {
+          appendReplyCard(bubble, message.allowChat === false ? "任务优先模式：无自然回复。" : "模型没有提供用户回复。");
+        }
+      }
+
       if (showThoughtMode) {
         const thought = message.pending ? "等待模型返回思考摘要..." : (message.thought || "");
         if (thought) {
@@ -1743,33 +1818,12 @@
         appendToolCard(bubble, message);
         appendLangGraphCard(bubble, message);
       }
-
-      if (message.pending) {
-        appendReplyCard(bubble, "等待模型输出...");
-      } else if (message.response) {
-        appendResponseCard(bubble, message.response);
-      } else if (!showThoughtMode && !showToolMode) {
-        appendReplyCard(bubble, message.allowChat === false ? "任务优先模式：无自然回复。" : "模型没有提供用户回复。");
-      }
     }
 
     function appendReplyCard(parent, text) {
       const card = document.createElement("div");
       card.className = "reply-card";
       card.textContent = text;
-      parent.appendChild(card);
-    }
-
-    function appendResponseCard(parent, text) {
-      const card = document.createElement("div");
-      card.className = "reply-card";
-      const label = document.createElement("div");
-      label.className = "reply-label";
-      label.textContent = "用户回复";
-      const body = document.createElement("div");
-      body.textContent = text;
-      card.appendChild(label);
-      card.appendChild(body);
       parent.appendChild(card);
     }
 
@@ -1910,6 +1964,7 @@
         chatTitle.textContent = target.title;
         renderConversations();
       }
+      saveStoredConversations();
 
       const empty = messagesEl.querySelector(".empty-state");
       if (empty) {
@@ -1951,11 +2006,13 @@
           throw new Error(data.detail || "后端请求失败");
         }
 
-        const modelReply = data.model_reply || data.reply || "";
+        const finalReply = data.reply || data.response || "";
+        const modelReply = data.model_reply || "";
         const actionResult = data.action_result || "无操作";
-        const assistantContent = `模型输出:\n${modelReply}\n\n工具执行结果:\n${actionResult}`;
+        const assistantContent = finalReply || modelReply || actionResult;
         Object.assign(loadingMessage, {
           content: assistantContent,
+          reply: finalReply,
           model_reply: modelReply,
           thought: data.thought || "",
           action: data.action || "none",
@@ -1969,6 +2026,7 @@
           pending: false,
           error: false,
         });
+        saveStoredConversations();
         renderMessages();
       } catch (error) {
         Object.assign(loadingMessage, {
@@ -1976,6 +2034,7 @@
           pending: false,
           error: true,
         });
+        saveStoredConversations();
         renderMessages();
       } finally {
         input.disabled = false;

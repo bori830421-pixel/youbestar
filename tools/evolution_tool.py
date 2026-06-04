@@ -1,4 +1,4 @@
-from agent_system.manager import request_approval, write_test_file, write_to_sandbox
+from agent_system.manager import install_local_skill, request_approval, write_test_file, write_to_sandbox
 
 
 def write_skill(params: dict) -> str:
@@ -23,3 +23,15 @@ def request_skill_approval(params: dict) -> str:
         test_file=params.get("test_file"),
     )
     return f"已提交审批：{record['skill_name']} ({record['id']})"
+
+
+def install_skill(params: dict) -> str:
+    result = install_local_skill(
+        skill_name=params.get("skill_name", ""),
+        code=params.get("code", ""),
+        description=params.get("description", ""),
+        title=params.get("title", ""),
+        version=params.get("version", "dev"),
+        overwrite=bool(params.get("overwrite", True)),
+    )
+    return f"已安装本地技能：{result['skill_name']} -> {result['file']}"

@@ -7,7 +7,7 @@ from typing_extensions import TypedDict
 
 from agent_system.manager import is_approved_skill, run_approved_skill
 from agent_system.skill_registry import is_skill_enabled
-from core.loop import build_agent_prompt, normalize_action_name
+from core.loop import build_agent_prompt, bridge_tool_result_to_response, normalize_action_name
 from core.parser import parse_agent_output
 from memory.memory import Memory
 
@@ -28,6 +28,9 @@ class AgentGraphState(TypedDict, total=False):
 
 class AgentGraphContext(TypedDict):
     llm: Any
+
+
+FAILURE_MARKERS = ("失败", "错误", "未知工具", "技能已关闭", "error")
 
 
 def plan_node(state: AgentGraphState, runtime: Runtime[AgentGraphContext]) -> dict[str, Any]:
@@ -78,7 +81,37 @@ def execute_skill_node(state: AgentGraphState) -> dict[str, Any]:
     }
 
 
+def is_failed_result(result: str) -> bool:
+    return any(marker.lower() in result.lower() for marker in FAILURE_MARKERS)
+
+
+def reflect_node(state: AgentGraphState) -> dict[str, Any]:
+    allow_chat = bool(state.get("allow_chat", True))
+    action = state.get("action", "none")
+    action_result = state.get("action_result", "无操作")
+    response = state.get("response", "")
+
+    if allow_chat and not response:
+        if action != "none" and is_failed_result(action_result):
+            response = f"我刚才尝试执行这个能力，但没有成功：{action_result}。你可以换个说法，或者让我先创建、启用对应技能。"
+        elif action != "none":
+            response = action_result
+        else:
+            response = "我在。你可以继续说。"
+
+    return {
+        "response": response if allow_chat else "",
+        "visited_nodes": [*state.get("visited_nodes", []), "reflect"],
+    }
+
+
 def finish_node(state: AgentGraphState) -> dict[str, Any]:
+    response = bridge_tool_result_to_response(
+        state.get("action", "none"),
+        state.get("action_result", "无操作"),
+        state.get("response", ""),
+        bool(state.get("allow_chat", True)),
+    )
     history = [
         *state.get("history", []),
         {
@@ -88,6 +121,7 @@ def finish_node(state: AgentGraphState) -> dict[str, Any]:
         },
     ]
     return {
+        "response": response,
         "history": history[-20:],
         "visited_nodes": [*state.get("visited_nodes", []), "finish"],
     }
@@ -99,6 +133,7 @@ class LangGraphBridge:
         builder.add_node("plan", plan_node)
         builder.add_node("no_action", no_action_node)
         builder.add_node("execute_skill", execute_skill_node)
+        builder.add_node("reflect", reflect_node)
         builder.add_node("finish", finish_node)
         builder.add_edge(START, "plan")
         builder.add_conditional_edges(
@@ -109,8 +144,9 @@ class LangGraphBridge:
                 "execute_skill": "execute_skill",
             },
         )
-        builder.add_edge("no_action", "finish")
-        builder.add_edge("execute_skill", "finish")
+        builder.add_edge("no_action", "reflect")
+        builder.add_edge("execute_skill", "reflect")
+        builder.add_edge("reflect", "finish")
         builder.add_edge("finish", END)
         self.graph = builder.compile(checkpointer=InMemorySaver())
 

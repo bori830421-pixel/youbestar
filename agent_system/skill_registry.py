@@ -15,6 +15,11 @@ BUILTIN_SKILLS = {
         "title": "打开浏览器",
         "description": "根据 URL 打开系统默认浏览器。",
     },
+    "official.query_weather": {
+        "type": "official",
+        "title": "查询天气",
+        "description": "根据城市名快速查询未来 1-7 天天气预报。",
+    },
     "official.write_skill": {
         "type": "official",
         "title": "写入 Sandbox 技能",
@@ -30,6 +35,11 @@ BUILTIN_SKILLS = {
         "title": "提交技能审批",
         "description": "测试通过后提交人工审批请求。",
     },
+    "official.install_local_skill": {
+        "type": "official",
+        "title": "自主安装本地技能",
+        "description": "直接写入或覆盖 skills/local 下的 local.* 技能并注册。",
+    },
     "official.list_files": {
         "type": "official",
         "title": "列出白名单文件",
@@ -40,15 +50,26 @@ BUILTIN_SKILLS = {
         "title": "读取白名单文件",
         "description": "读取受控白名单目录内的普通文本或代码文件。",
     },
+    "official.write_project_file": {
+        "type": "official",
+        "title": "写入项目文件",
+        "description": "在项目白名单目录内写入普通文本或代码文件，可用于修改运行目录内的项目文件。",
+    },
 }
 
 LEGACY_SKILL_ALIASES = {
     "open_browser": "official.open_browser",
+    "query_weather": "official.query_weather",
+    "weather": "official.query_weather",
     "write_skill": "official.write_skill",
     "write_skill_test": "official.write_skill_test",
     "request_skill_approval": "official.request_skill_approval",
+    "install_local_skill": "official.install_local_skill",
+    "install_skill": "official.install_local_skill",
     "list_files": "official.list_files",
     "read_file": "official.read_file",
+    "write_project_file": "official.write_project_file",
+    "write_file": "official.write_project_file",
 }
 
 

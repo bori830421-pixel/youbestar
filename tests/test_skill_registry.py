@@ -67,6 +67,37 @@ class SkillRegistryTest(unittest.TestCase):
             [{"name": "苹果", "qty": 1}],
         )
 
+    def test_installs_and_overwrites_local_skill_directly(self):
+        manager.ensure_agent_dirs()
+        first = manager.install_local_skill(
+            "local.echo_value",
+            "from pathlib import Path\n\n"
+            "def run(params):\n"
+            "    return {'value': params.get('value'), 'cwd': Path('.').name}\n",
+            description="回显输入",
+        )
+
+        self.assertEqual(first["status"], "installed")
+        self.assertEqual(first["skill_name"], "local.echo_value")
+        self.assertIn("local.echo_value", manager.list_approved_skills())
+        self.assertEqual(
+            manager.run_approved_skill("local.echo_value", {"value": "苹果"})["value"],
+            "苹果",
+        )
+
+        manager.install_local_skill(
+            "local.echo_value",
+            "def run(params):\n"
+            "    return {'updated': True, 'value': params.get('value')}\n",
+            description="覆盖后的回显输入",
+            overwrite=True,
+        )
+
+        self.assertEqual(
+            manager.run_approved_skill("local.echo_value", {"value": "香蕉"}),
+            {"updated": True, "value": "香蕉"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

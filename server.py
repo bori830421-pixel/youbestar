@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from agent_system.server import router as skills_router
+from core.agent_runtime import AgentRuntime
 from core.config import ModelConfig, load_config, save_config_file
 from core.langgraph_bridge import LangGraphBridge
 from core.llm import LLM
@@ -24,6 +25,7 @@ class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = Field(default_factory=list)
     allowChat: bool = True
+    threadId: str = Field(default="default", min_length=1, max_length=200)
 
 
 class LangGraphChatRequest(ChatRequest):
@@ -65,7 +67,9 @@ class ModelDiscoveryResponse(BaseModel):
 
 app = FastAPI(title="Youbestar AI Agent")
 memory = Memory()
+agent_runtime = AgentRuntime()
 langgraph_bridge = LangGraphBridge()
+USE_AGENT_RUNTIME = True
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,6 +79,51 @@ app.add_middleware(
 )
 
 app.include_router(skills_router)
+
+
+def build_user_visible_reply(response: str, action: str, action_result: str) -> str:
+    if response:
+        return response
+    if action != "none":
+        return action_result
+    return ""
+
+
+def run_legacy_agent_loop(llm: LLM, user_message: str, allow_chat: bool) -> ChatResponse:
+    model_reply, thought, action, params, action_result, user_response = agent_loop(
+        llm,
+        memory,
+        user_message,
+        allow_chat,
+    )
+    return ChatResponse(
+        reply=build_user_visible_reply(user_response, action, action_result),
+        model_reply=model_reply,
+        thought=thought,
+        action=action,
+        params=params,
+        action_result=action_result,
+        response=user_response,
+    )
+
+
+def run_agent_runtime(llm: LLM, user_message: str, allow_chat: bool, thread_id: str = "default") -> ChatResponse:
+    result = agent_runtime.run(
+        llm,
+        memory,
+        user_message,
+        allow_chat=allow_chat,
+        thread_id=thread_id,
+    )
+    return ChatResponse(
+        reply=result.reply,
+        model_reply=result.model_reply,
+        thought=result.thought,
+        action=result.action,
+        params=result.params,
+        action_result=result.action_result,
+        response=result.response,
+    )
 
 
 @app.get("/health")
@@ -117,30 +166,13 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     try:
         llm = LLM(load_config())
-        model_reply, thought, action, params, action_result, user_response = agent_loop(
-            llm,
-            memory,
-            user_message,
-            request.allowChat,
-        )
+        if USE_AGENT_RUNTIME:
+            return run_agent_runtime(llm, user_message, request.allowChat, request.threadId)
+        return run_legacy_agent_loop(llm, user_message, request.allowChat)
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail=f"Model API request failed: {exc}") from exc
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    reply_parts = [f"模型输出:\n{model_reply}", f"工具执行结果:\n{action_result}"]
-    if user_response:
-        reply_parts.append(f"用户回复:\n{user_response}")
-    reply = "\n\n".join(reply_parts)
-    return ChatResponse(
-        reply=reply,
-        model_reply=model_reply,
-        thought=thought,
-        action=action,
-        params=params,
-        action_result=action_result,
-        response=user_response,
-    )
 
 
 @app.post("/langgraph/chat", response_model=LangGraphChatResponse)
@@ -161,16 +193,10 @@ def langgraph_chat(request: LangGraphChatRequest) -> LangGraphChatResponse:
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    reply_parts = [
-        f"模型输出:\n{result['model_reply']}",
-        f"工具执行结果:\n{result['action_result']}",
-        f"LangGraph 节点:\n{' -> '.join(result['graph_nodes'])}",
-    ]
-    if result["response"]:
-        reply_parts.append(f"用户回复:\n{result['response']}")
+    reply = build_user_visible_reply(result["response"], result["action"], result["action_result"])
 
     return LangGraphChatResponse(
-        reply="\n\n".join(reply_parts),
+        reply=reply,
         model_reply=result["model_reply"],
         thought=result["thought"],
         action=result["action"],

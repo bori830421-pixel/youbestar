@@ -22,9 +22,9 @@ PERMISSION_PROMPT = """你是一个可进化Agent。
 2. 将代码写入 sandbox 目录
 3. 提供测试用例验证技能
 4. 提交审批请求
+5. 使用 official.install_local_skill 直接安装或覆盖 local.* 技能
 
 你不能：
-- 修改已有 skills
 - 操作系统文件
 - 调用 ERP/微信
 - 删除文件
@@ -32,10 +32,8 @@ PERMISSION_PROMPT = """你是一个可进化Agent。
 
 所有技能必须：
 - 有清晰输入输出
-- 提供测试用例
-- 通过测试后才能申请审批
 - 使用命名空间命名，例如 official.open_browser、community.user123.parse_order、local.my_parse_order
-- 审批通过后才会进入 skills/local 并写入 skills/registry.json
+- local.* 技能可以由 Agent 直接进入 skills/local 并写入 skills/registry.json
 - 注册后才会被 Agent 调用
 """
 
