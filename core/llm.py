@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 from core.config import ModelConfig, normalize_chat_api_url, require_complete_config
@@ -30,7 +32,11 @@ class LLM:
         response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
         response.raise_for_status()
 
-        data = response.json()
+        try:
+            data = json.loads(response.content.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("Model API returned invalid UTF-8 JSON.") from exc
+
         try:
             return data["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError, TypeError) as exc:

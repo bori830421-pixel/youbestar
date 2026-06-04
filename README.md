@@ -7,7 +7,9 @@ Youbestar Agent 是一个最小可运行、可扩展的本地 AI Agent 框架。
 - FastAPI 后端
 - 浏览器 HTML 前端
 - 网页端模型配置保存
+- 第三方 API 模型列表发现
 - 闲聊模式 / 任务优先模式切换
+- LangGraph 旁路实验模式
 - OpenAI-compatible `/v1` 云端模型接口
 - 受控技能系统
 - 技能命名空间与注册表
@@ -51,6 +53,20 @@ youbestar.json
 
 注意：`youbestar.json` 可能包含 API Key，已经被 `.gitignore` 忽略，不要上传到 GitHub。
 
+配置页填写 API 地址和 API Key 后，可以点击“获取模型”。Youbestar 后端会请求对应的 OpenAI-compatible `/models` 接口，例如：
+
+```text
+https://integrate.api.nvidia.com/v1
+  -> https://integrate.api.nvidia.com/v1/models
+
+https://api.freemodel.dev/v1
+  -> https://api.freemodel.dev/v1/models
+```
+
+拉取成功后，模型名输入框可以搜索和选择返回的模型。第三方接口不支持 `/models` 时，仍然可以手动填写模型名。
+
+如果只填写供应商根地址，并且根 `/models` 返回 `404`，Youbestar 会尝试 `/v1/models`。成功后会自动把配置地址规范为对应的 `/v1` 基地址。
+
 ## 对话模式
 
 聊天窗口提供一个“允许闲聊”开关：
@@ -79,6 +95,23 @@ youbestar.json
 }
 ```
 
+## LangGraph 实验模式
+
+聊天输入框上方提供“LangGraph 实验”开关：
+
+- 关闭：继续使用原有 `/chat` Agent loop。
+- 开启：请求独立的 `/langgraph/chat`，经过 LangGraph 状态图处理。
+
+当前最小图流程：
+
+```text
+plan -> no_action / execute_skill -> finish
+```
+
+LangGraph 模式继续复用现有模型配置、Prompt、Action 解析、技能注册表和技能开关，不会绕过技能审批规则。界面会显示本轮经过的图节点和同一会话的 `turn_count`，对话历史按 `thread_id` 隔离。
+
+当前使用 `InMemorySaver` 保存线程状态，只用于测试 LangGraph 能力；服务重启后状态会清空。
+
 ## 核心目录
 
 ```text
@@ -90,6 +123,7 @@ youbestar/
   github_sync.bat
   github_upload.bat
   core/
+    langgraph_bridge.py
     llm.py
     loop.py
     parser.py
@@ -169,13 +203,13 @@ Agent 才能调用
 https://github.com/bori830421-pixel/youbestar
 ```
 
-第一次上传空仓库时，双击：
+把当前本地版本上传并覆盖 GitHub 时，双击：
 
 ```bat
 github_upload.bat
 ```
 
-后续拉取 GitHub 最新代码，双击：
+从 GitHub 下载最新代码时，双击：
 
 ```bat
 github_sync.bat
@@ -184,6 +218,9 @@ github_sync.bat
 注意：
 
 - 空仓库第一次没有 `main` 分支，先上传，不要先同步。
+- `github_upload.bat` 以本地版本为准，会提交本地修改并使用 `--force-with-lease` 安全覆盖 GitHub；不会执行 pull。
+- `github_sync.bat` 只下载，不会上传；发现未提交的本地修改会立即停止并保护文件。
+- 下载同步使用 `--ff-only`，本地和远端历史分叉时会停止，不会自动改写历史。
 - 如果 GitHub 要求登录，请先完成 Git Credential Manager 或 GitHub CLI 登录。
 - `github_upload.bat` 会阻止已经被 Git 跟踪的 `youbestar.json` 继续上传。
 

@@ -65,27 +65,6 @@ if not errorlevel 1 (
     exit /b 1
 )
 
-echo Checking whether remote branch %BRANCH% already exists...
-git ls-remote --exit-code --heads origin "%BRANCH%" >nul 2>nul
-if errorlevel 1 (
-    echo Remote branch does not exist yet. First upload mode enabled.
-) else (
-    echo Remote branch exists. Syncing before upload...
-    git fetch origin "%BRANCH%"
-    if errorlevel 1 (
-        echo Fetch failed.
-        pause
-        exit /b 1
-    )
-
-    git pull --rebase origin "%BRANCH%"
-    if errorlevel 1 (
-        echo Pull failed. Resolve conflicts, then run this bat again.
-        pause
-        exit /b 1
-    )
-)
-
 echo.
 git status --short
 echo.
@@ -111,10 +90,26 @@ if not errorlevel 1 (
     )
 )
 
-echo Pushing to GitHub...
-git push -u origin "%BRANCH%"
+echo Checking whether remote branch %BRANCH% already exists...
+git ls-remote --exit-code --heads origin "%BRANCH%" >nul 2>nul
+if errorlevel 1 (
+    echo Remote branch does not exist yet. First upload mode enabled.
+) else (
+    echo Remote branch exists. Refreshing remote metadata before overwrite...
+    git fetch origin "+%BRANCH%:refs/remotes/origin/%BRANCH%"
+    if errorlevel 1 (
+        echo Fetch failed.
+        pause
+        exit /b 1
+    )
+)
+
+echo Uploading local %BRANCH% and overwriting GitHub safely...
+git push -u --force-with-lease origin "%BRANCH%"
 if errorlevel 1 (
     echo Push failed.
+    echo The remote may have changed after the safety check.
+    echo Run this bat again after confirming that local files should overwrite GitHub.
     echo If GitHub asks for login, sign in with Git Credential Manager or GitHub CLI, then run this bat again.
     pause
     exit /b 1

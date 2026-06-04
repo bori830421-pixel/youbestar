@@ -55,6 +55,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
+set "DIRTY="
+for /f "usebackq tokens=*" %%S in (`git status --porcelain`) do set "DIRTY=1"
+if defined DIRTY (
+    echo Local changes detected. Download sync stopped to protect your files.
+    echo Commit or discard the local changes manually, then run this bat again.
+    echo.
+    git status --short
+    pause
+    exit /b 1
+)
+
 echo Checking remote branch %BRANCH%...
 git ls-remote --exit-code --heads origin "%BRANCH%" >nul 2>nul
 if errorlevel 1 (
@@ -73,10 +84,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Pulling with rebase...
-git pull --rebase origin "%BRANCH%"
+echo Downloading with fast-forward only...
+git pull --ff-only origin "%BRANCH%"
 if errorlevel 1 (
-    echo Pull failed. Resolve conflicts, then run this bat again.
+    echo Download stopped because local and GitHub histories have diverged.
+    echo No local files were discarded. Resolve the branch history manually.
     pause
     exit /b 1
 )

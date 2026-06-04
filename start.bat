@@ -29,7 +29,8 @@ if not exist "%VENV_PY%" (
     )
 )
 
-if not exist "%APP_DIR%.venv\Scripts\uvicorn.exe" (
+"%VENV_PY%" -c "import fastapi, uvicorn, requests, langgraph" >nul 2>nul
+if errorlevel 1 (
     echo Installing dependencies from requirements.txt...
     "%VENV_PY%" -m pip install -r "%APP_DIR%requirements.txt"
     if errorlevel 1 (
