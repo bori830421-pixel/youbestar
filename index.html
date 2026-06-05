@@ -500,7 +500,7 @@
 
     .message-row {
       display: grid;
-      grid-template-columns: 40px minmax(0, 760px);
+      grid-template-columns: 40px minmax(0, min(1120px, calc(100vw - 380px)));
       gap: 12px;
       align-items: start;
     }
@@ -552,8 +552,65 @@
     }
 
     .reply-card {
-      white-space: pre-wrap;
       background: #f1f2f4;
+    }
+
+    .reply-card h1,
+    .reply-card h2,
+    .reply-card h3,
+    .reply-card p {
+      margin: 0;
+    }
+
+    .reply-card h1 {
+      font-size: 18px;
+      line-height: 1.35;
+      margin-bottom: 12px;
+    }
+
+    .reply-card h2 {
+      font-size: 15px;
+      line-height: 1.4;
+      margin: 14px 0 8px;
+    }
+
+    .reply-card h3 {
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 12px 0 6px;
+    }
+
+    .reply-card p + p {
+      margin-top: 8px;
+    }
+
+    .markdown-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin: 8px 0 12px;
+    }
+
+    .reply-card table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      line-height: 1.45;
+      background: white;
+    }
+
+    .reply-card th,
+    .reply-card td {
+      padding: 8px 10px;
+      border: 1px solid #d9dde5;
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .reply-card th {
+      background: #f7f8fa;
+      font-weight: 700;
     }
 
     .trace-card {
@@ -1823,8 +1880,118 @@
     function appendReplyCard(parent, text) {
       const card = document.createElement("div");
       card.className = "reply-card";
-      card.textContent = text;
+      renderMarkdown(card, text);
       parent.appendChild(card);
+    }
+
+    function renderMarkdown(parent, text) {
+      const lines = String(text || "").split(/\r?\n/);
+      let index = 0;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.trim()) {
+          index += 1;
+          continue;
+        }
+
+        if (isMarkdownTableStart(lines, index)) {
+          const tableLines = [];
+          while (index < lines.length && lines[index].trim().startsWith("|")) {
+            tableLines.push(lines[index]);
+            index += 1;
+          }
+          parent.appendChild(buildMarkdownTable(tableLines));
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) {
+          const level = heading[1].length;
+          const element = document.createElement(`h${level}`);
+          appendInlineMarkdown(element, heading[2]);
+          parent.appendChild(element);
+          index += 1;
+          continue;
+        }
+
+        const paragraphLines = [line];
+        index += 1;
+        while (
+          index < lines.length &&
+          lines[index].trim() &&
+          !lines[index].match(/^(#{1,3})\s+(.+)$/) &&
+          !isMarkdownTableStart(lines, index)
+        ) {
+          paragraphLines.push(lines[index]);
+          index += 1;
+        }
+        const paragraph = document.createElement("p");
+        appendInlineMarkdown(paragraph, paragraphLines.join("\n"));
+        parent.appendChild(paragraph);
+      }
+    }
+
+    function isMarkdownTableStart(lines, index) {
+      return (
+        index + 1 < lines.length &&
+        lines[index].trim().startsWith("|") &&
+        /^\|\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(lines[index + 1].trim())
+      );
+    }
+
+    function buildMarkdownTable(tableLines) {
+      const wrap = document.createElement("div");
+      wrap.className = "markdown-table-wrap";
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+      const headers = splitMarkdownRow(tableLines[0]);
+
+      const headRow = document.createElement("tr");
+      headers.forEach((header) => {
+        const th = document.createElement("th");
+        appendInlineMarkdown(th, header);
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+
+      tableLines.slice(2).forEach((rowLine) => {
+        const row = document.createElement("tr");
+        splitMarkdownRow(rowLine).forEach((cell) => {
+          const td = document.createElement("td");
+          appendInlineMarkdown(td, cell);
+          row.appendChild(td);
+        });
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      return wrap;
+    }
+
+    function splitMarkdownRow(line) {
+      return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+    }
+
+    function appendInlineMarkdown(parent, text) {
+      const parts = String(text || "").split(/(\*\*[^*]+\*\*)/g);
+      parts.forEach((part) => {
+        if (!part) return;
+        const strongMatch = part.match(/^\*\*([^*]+)\*\*$/);
+        if (strongMatch) {
+          const strong = document.createElement("strong");
+          strong.textContent = strongMatch[1];
+          parent.appendChild(strong);
+        } else {
+          const textParts = part.split("\n");
+          textParts.forEach((textPart, partIndex) => {
+            if (partIndex > 0) parent.appendChild(document.createElement("br"));
+            parent.appendChild(document.createTextNode(textPart));
+          });
+        }
+      });
     }
 
     function appendTraceCard(parent, options) {

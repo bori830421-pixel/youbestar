@@ -9,6 +9,7 @@ from agent_system.manager import is_approved_skill, run_approved_skill
 from agent_system.skill_registry import is_skill_enabled
 from core.loop import build_agent_prompt, bridge_tool_result_to_response, normalize_action_name
 from core.parser import parse_agent_output
+from core.ui_formatter import format_agent_reply, format_error, observation_to_text
 from memory.memory import Memory
 
 
@@ -19,7 +20,7 @@ class AgentGraphState(TypedDict, total=False):
     thought: str
     action: str
     params: dict[str, Any]
-    action_result: str
+    action_result: Any
     response: str
     visited_nodes: list[str]
     turn_count: int
@@ -73,7 +74,7 @@ def execute_skill_node(state: AgentGraphState) -> dict[str, Any]:
     elif not is_skill_enabled(action):
         result = f"技能已关闭：{action}"
     else:
-        result = str(run_approved_skill(action, params))
+        result = run_approved_skill(action, params)
 
     return {
         "action_result": result,
@@ -81,8 +82,9 @@ def execute_skill_node(state: AgentGraphState) -> dict[str, Any]:
     }
 
 
-def is_failed_result(result: str) -> bool:
-    return any(marker.lower() in result.lower() for marker in FAILURE_MARKERS)
+def is_failed_result(result: Any) -> bool:
+    text = observation_to_text(result)
+    return any(marker.lower() in text.lower() for marker in FAILURE_MARKERS)
 
 
 def reflect_node(state: AgentGraphState) -> dict[str, Any]:
@@ -91,12 +93,12 @@ def reflect_node(state: AgentGraphState) -> dict[str, Any]:
     action_result = state.get("action_result", "无操作")
     response = state.get("response", "")
 
-    if allow_chat and not response:
+    if allow_chat:
         if action != "none" and is_failed_result(action_result):
-            response = f"我刚才尝试执行这个能力，但没有成功：{action_result}。你可以换个说法，或者让我先创建、启用对应技能。"
+            response = format_error(observation_to_text(action_result))
         elif action != "none":
-            response = action_result
-        else:
+            response = format_agent_reply(action, response, action_result)
+        elif not response:
             response = "我在。你可以继续说。"
 
     return {
@@ -108,7 +110,7 @@ def reflect_node(state: AgentGraphState) -> dict[str, Any]:
 def finish_node(state: AgentGraphState) -> dict[str, Any]:
     response = bridge_tool_result_to_response(
         state.get("action", "none"),
-        state.get("action_result", "无操作"),
+        observation_to_text(state.get("action_result", "无操作")),
         state.get("response", ""),
         bool(state.get("allow_chat", True)),
     )
@@ -117,11 +119,13 @@ def finish_node(state: AgentGraphState) -> dict[str, Any]:
         {
             "user": state["user_input"],
             "action": state.get("action", "none"),
-            "result": state.get("action_result", "无操作"),
+            "result": observation_to_text(state.get("action_result", "无操作")),
         },
     ]
     return {
-        "response": response,
+        "response": format_agent_reply(state.get("action", "none"), response, state.get("action_result", "无操作"))
+        if state.get("allow_chat", True)
+        else "",
         "history": history[-20:],
         "visited_nodes": [*state.get("visited_nodes", []), "finish"],
     }
@@ -175,7 +179,7 @@ class LangGraphBridge:
             "thought": result.get("thought", ""),
             "action": result.get("action", "none"),
             "params": result.get("params", {}),
-            "action_result": result.get("action_result", "无操作"),
+            "action_result": observation_to_text(result.get("action_result", "无操作")),
             "response": result.get("response", "") if allow_chat else "",
             "graph_nodes": result.get("visited_nodes", []),
             "turn_count": int(result.get("turn_count", 1)),

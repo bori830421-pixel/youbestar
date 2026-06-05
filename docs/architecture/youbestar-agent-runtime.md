@@ -216,9 +216,99 @@ Responsibilities:
 Responsibilities:
 
 - Set `reply` to the final user-visible answer.
+- Route final user-visible output through `core/ui_formatter.py`.
 - Keep debug fields separate.
 - Write short memory.
 - Return a result compatible with the existing API.
+
+## UI Formatting Layer
+
+All user-visible Agent replies should pass through the UI formatting layer:
+
+```text
+core/ui_formatter.py
+```
+
+The formatter owns Markdown structure:
+
+```text
+# one top-level title
+## module sections
+### optional details
+tables for repeated data
+bold for key conclusions, amounts, quantities, and product names
+```
+
+Nodes and tools may produce raw observations, but `finalize` is responsible for converting those observations into a user-facing Markdown reply.
+
+Skills should not hand-write final Markdown for every use case. A skill should return structured data and let the final response layer format it.
+
+Preferred generic skill result:
+
+```json
+{
+  "ok": true,
+  "kind": "market_quote",
+  "title": "Market Quote Result",
+  "columns": ["Name", "Code", "Time", "Close"],
+  "rows": [["香农芯创", "300475", "2026-06-05 16:14:36", 171.9]],
+  "summary": {
+    "name": "香农芯创",
+    "code": "300475",
+    "close": 171.9
+  }
+}
+```
+
+The formatter owns title hierarchy, tables, bold emphasis, and user-facing polish. Runtime debug fields may still keep the raw tool observation.
+
+## Network Access Layer
+
+Network-enabled skills must not each own low-level HTTP behavior.
+
+The project should centralize network reads in a shared module such as:
+
+```text
+core/http_client.py
+```
+
+Shared helpers should expose:
+
+```python
+fetch_text(url)
+fetch_json(url)
+```
+
+The shared client owns:
+
+- timeout defaults
+- browser-like User-Agent when needed
+- charset detection from headers
+- fallback decoding through `utf-8-sig`, `utf-8`, `gb18030`, and `gbk`
+- JSON parsing
+- consistent error messages
+
+Provider-specific quirks may live in provider adapters, but ordinary skills should not contain repeated ad hoc encoding logic.
+
+## Capability Domains
+
+Avoid an endlessly flat skill list. Route user-facing intent through capability domains and keep providers modular behind them.
+
+Recommended domains:
+
+```text
+query_hub
+market_data
+weather_data
+web_search
+browser_headless
+browser_desktop
+```
+
+Browser automation has two separate responsibilities:
+
+- `browser_desktop`: visible browser for user inspection, login, and manual verification.
+- `browser_headless`: background browser for search, scraping, extraction, and validation.
 
 ## Relationship To Existing Paths
 

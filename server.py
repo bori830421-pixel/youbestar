@@ -13,6 +13,7 @@ from core.langgraph_bridge import LangGraphBridge
 from core.llm import LLM
 from core.loop import agent_loop
 from core.model_discovery import discover_models
+from core.ui_formatter import format_agent_reply
 from memory.memory import Memory
 
 
@@ -82,11 +83,7 @@ app.include_router(skills_router)
 
 
 def build_user_visible_reply(response: str, action: str, action_result: str) -> str:
-    if response:
-        return response
-    if action != "none":
-        return action_result
-    return ""
+    return format_agent_reply(action, response, action_result)
 
 
 def run_legacy_agent_loop(llm: LLM, user_message: str, allow_chat: bool) -> ChatResponse:

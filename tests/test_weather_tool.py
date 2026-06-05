@@ -16,7 +16,7 @@ class FakeWeatherResponse(io.BytesIO):
 
 class WeatherToolTest(unittest.TestCase):
     def fake_urlopen(self, url, timeout=10):
-        self.request_url = url
+        self.request_url = getattr(url, "full_url", url)
         payload = (
             b'{"daily":{"time":["2026-06-04","2026-06-05"],'
             b'"weathercode":[0,63],'

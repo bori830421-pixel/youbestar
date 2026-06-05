@@ -15,6 +15,7 @@ Youbestar Agent 是一个最小可运行、可扩展的本地 AI Agent 框架。
 - 受控技能系统
 - 技能命名空间与注册表
 - 项目内普通文件写入技能
+- 统一结构化 UI 输出格式层
 - GitHub 同步/上传 bat 脚本
 
 ## 快速启动
@@ -147,6 +148,82 @@ prepare -> execute -> reflect -> finalize
 
 `/chat` 当前默认使用自研 `AgentRuntime`。旧 `agent_loop` 仍作为兼容 fallback 保留，便于必要时快速回退。
 
+## 结构化输出格式
+
+Agent 面向用户的最终回复统一走：
+
+```text
+core/ui_formatter.py
+```
+
+当前 formatter 提供：
+
+```text
+format_order_result(data)
+format_inventory(data)
+format_error(msg)
+format_agent_reply(action, response, action_result)
+format_skill_result(result)
+```
+
+输出规范：
+
+- 每次回复包含一个一级标题
+- 复杂内容拆成二级模块
+- 关键结论、数量、金额、商品名加粗
+- 多条数据必须使用 Markdown 表格
+- Emoji 只用于标题或少量提示，避免堆叠
+
+天气查询等工具结果会由 Runtime / LangGraph / server 最终回复层转成结构化 Markdown，避免结果只藏在工具卡片里。
+
+技能只负责业务执行和返回结构化结果，不负责最终 Markdown 渲染。新增技能应优先返回 `ok / kind / title / columns / rows / summary` 这类结构，由 `core/ui_formatter.py` 统一转成用户可见回复，避免每个技能重复写表格、Emoji 和标题格式。
+
+自研 `AgentRuntime` 和 LangGraph 实验桥都会保留技能返回的原始结构化结果，再交给 formatter。不要在执行节点里把技能结果直接 `str(dict)` 后返回给用户。
+
+## 统一网络读取层
+
+联网技能不要各自处理编码、请求头、超时和 JSON 解析。后续新增或改造联网能力时，应统一走共享网络层，例如：
+
+```text
+core/http_client.py
+```
+
+技能侧只调用：
+
+```python
+fetch_text(url)
+fetch_json(url)
+```
+
+共享网络层负责：
+
+- 超时和 User-Agent
+- 从 HTTP Header 识别 charset
+- 自动尝试 `utf-8-sig`、`utf-8`、`gb18030`、`gbk`
+- JSON 解析和清晰错误提示
+
+不要在每个证券、天气、搜索技能里手写“某接口用 GBK、某接口用 UTF-8”。特殊供应商差异应沉到统一网络层或 provider adapter。
+
+当前已接入：
+
+- `tools/weather_tool.py`
+- `agent_system/skills/local/query_market_data.py`
+
+## 能力归类规则
+
+技能不应无限平铺增长。新增能力优先归入能力域：
+
+```text
+query_hub
+market_data
+weather_data
+web_search
+browser_headless
+browser_desktop
+```
+
+浏览器能力必须拆成两类：桌面可见浏览器用于打开页面、登录和人工查看；无头浏览器用于后台搜索、抓取、提取和校验。
+
 ## 核心目录
 
 ```text
@@ -162,6 +239,7 @@ youbestar/
     agent_nodes.py
     agent_runtime.py
     agent_state.py
+    http_client.py
     langgraph_bridge.py
     llm.py
     loop.py
@@ -225,6 +303,7 @@ run(params)
 official.list_files
 official.read_file
 official.write_project_file
+local.query_market_data
 ```
 
 `official.write_project_file` 可在项目白名单目录内写入普通文本或代码文件，参数示例：
@@ -238,6 +317,14 @@ official.write_project_file
 ```
 
 它仍会阻止写入敏感路径，例如 `.git`、`.venv`、`youbestar.json`、token、cookie、credential、secret 等命名的文件。
+
+本地证券行情技能：
+
+```text
+local.query_market_data
+```
+
+用途：查询股票、指数行情数据。支持 `symbol`、可选 `date` 和 `fields`。最新行情走腾讯行情接口，历史日 K 走东方财富接口；网络读取统一走 `core.http_client.py`，避免中文名称乱码。技能返回结构化结果，由 `core.ui_formatter.py` 渲染成表格。
 
 ## 受控进化流程
 

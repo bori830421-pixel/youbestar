@@ -6,6 +6,7 @@ from agent_system.skill_registry import is_skill_enabled
 from core.agent_state import AgentState
 from core.loop import build_agent_prompt, bridge_tool_result_to_response, normalize_action_name
 from core.parser import parse_agent_output
+from core.ui_formatter import format_agent_reply, format_error, observation_to_text
 from memory.memory import Memory
 
 
@@ -23,8 +24,9 @@ class AgentContext:
     memory: Memory
 
 
-def has_failed(observation: str) -> bool:
-    return any(marker.lower() in observation.lower() for marker in FAILURE_MARKERS)
+def has_failed(observation: Any) -> bool:
+    text = observation_to_text(observation)
+    return any(marker.lower() in text.lower() for marker in FAILURE_MARKERS)
 
 
 def prepare_node(state: AgentState, context: AgentContext) -> AgentState:
@@ -52,7 +54,7 @@ def execute_node(state: AgentState, context: AgentContext) -> AgentState:
     elif not is_skill_enabled(state.action):
         state.observation = f"技能已关闭：{state.action}"
     else:
-        state.observation = str(run_approved_skill(state.action, state.params))
+        state.observation = run_approved_skill(state.action, state.params)
     return state
 
 
@@ -63,15 +65,15 @@ def reflect_node(state: AgentState, context: AgentContext) -> AgentState:
         state.reflection = "任务优先模式，不生成自然回复。"
         return state
 
-    if state.response:
+    if state.action == "none" and state.response:
         state.reflection = "已有自然回复，保留。"
         return state
 
     if state.action != "none" and has_failed(state.observation):
-        state.response = f"我刚才尝试执行这个能力，但没有成功：{state.observation}。你可以换个说法，或者让我先创建、启用对应技能。"
+        state.response = format_error(observation_to_text(state.observation))
         state.reflection = "工具结果失败，已转成自然说明。"
     elif state.action != "none":
-        state.response = state.observation
+        state.response = format_agent_reply(state.action, state.response, state.observation)
         state.reflection = "工具执行成功，已把结果作为回复。"
     else:
         state.response = "我在。你可以继续说。"
@@ -81,13 +83,17 @@ def reflect_node(state: AgentState, context: AgentContext) -> AgentState:
 
 def finalize_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("finalize")
-    state.reply = bridge_tool_result_to_response(
+    raw_reply = bridge_tool_result_to_response(
         state.action,
         state.observation,
-        state.response,
+        observation_to_text(state.response),
         state.allow_chat,
     )
-    if state.response and not state.reply:
-        state.reply = state.response
-    context.memory.add(state.user_input, state.action, state.observation)
+    if state.allow_chat:
+        state.reply = format_agent_reply(state.action, raw_reply, state.observation)
+        state.response = state.reply
+    else:
+        state.reply = ""
+        state.response = ""
+    context.memory.add(state.user_input, state.action, observation_to_text(state.observation))
     return state

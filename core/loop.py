@@ -101,6 +101,8 @@ allowChat={str(allow_chat)}
 5. 不要主动删除用户文件；如果必须做高风险破坏性操作，先在 Response 里说明风险并等待用户确认。
 6. 你可以读取白名单目录内的普通项目文件。
 7. 你可以使用 official.write_project_file 写入运行目录内的普通项目文件，但不能写入密钥、配置密钥、虚拟环境、Git 内部目录或敏感路径。
+8. 新建或更新联网技能时，必须复用 core.http_client 的 fetch_text/fetch_json，不要在技能里各自处理编码、超时、请求头或 JSON 解析。
+9. 新建或更新技能时，技能只返回结构化数据，不要手写最终 Markdown 渲染；用户可见展示由 core.ui_formatter 统一处理。
 
 规则:
 1. 如果用户要求打开网页、打开网站、打开百度等，使用 official.open_browser。
@@ -117,7 +119,8 @@ allowChat={str(allow_chat)}
 12. 如果 allowChat=False 且用户只是问候或闲聊，Action: none，Params: {{}}，禁止自然回复。
 13. 如果用户提出工具操作请求，Action 选择对应已开启技能，Params 填该技能需要的参数。
 14. Response 是对用户说的话，不要写成日志、协议说明或“我判断为...”。
-15. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
+15. 创建查询类技能时，优先按能力域归类，例如 market_data、weather_data、web_search、browser_headless、browser_desktop，不要让同类能力无限平铺。
+16. 严格按下面格式输出，不要输出额外格式，并把 Action 替换为完整命名空间技能名或 none。
 
 行为格式严格要求:
 {output_format}

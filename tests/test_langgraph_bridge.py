@@ -33,7 +33,8 @@ class LangGraphBridgeTest(unittest.TestCase):
         self.assertEqual(first["graph_nodes"], ["plan", "no_action", "reflect", "finish"])
         self.assertEqual(first["turn_count"], 1)
         self.assertEqual(first["action_result"], "无操作")
-        self.assertEqual(first["response"], "你好！")
+        self.assertIn("# ✅ 回复", first["response"])
+        self.assertIn("你好！", first["response"])
         self.assertEqual(second["turn_count"], 2)
         self.assertEqual(other_thread["turn_count"], 1)
         self.assertIn("你好 -> none -> 无操作", llm.prompts[1])
@@ -86,7 +87,8 @@ class LangGraphBridgeTest(unittest.TestCase):
 
         self.assertEqual(result["action"], "official.query_weather")
         self.assertEqual(result["action_result"], "汕头未来1天天气预报")
-        self.assertEqual(result["response"], "汕头未来1天天气预报")
+        self.assertIn("# ✅ 查询结果", result["response"])
+        self.assertIn("汕头未来1天天气预报", result["response"])
         run_mock.assert_called_once_with(
             "official.query_weather",
             {"city": "汕头", "days": 1},

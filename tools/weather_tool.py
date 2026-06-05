@@ -1,6 +1,6 @@
-import json
-import urllib.request
 from typing import Any
+
+from core.http_client import fetch_json
 
 
 CITY_COORDS = {
@@ -66,8 +66,7 @@ def fetch_weather(lat: float, lon: float, forecast_days: int = 7) -> dict[str, A
         "&daily=weathercode,temperature_2m_max,temperature_2m_min"
         f"&timezone=Asia/Shanghai&forecast_days={days}"
     )
-    with urllib.request.urlopen(url, timeout=10) as response:
-        return json.load(response)
+    return fetch_json(url)
 
 
 def format_weather(data: dict[str, Any], city: str) -> str:

@@ -60,7 +60,8 @@ class ServerChatRuntimeTest(unittest.TestCase):
 
         response = server.run_legacy_agent_loop(FakeLLM(), "汕头天气", True)
 
-        self.assertEqual(response.reply, "汕头未来1天天气预报")
+        self.assertIn("# ✅ 查询结果", response.reply)
+        self.assertIn("汕头未来1天天气预报", response.reply)
         self.assertEqual(response.model_reply, "Thought: 用户查询天气。\nAction: official.query_weather\nParams: {}")
         self.assertEqual(response.thought, "用户查询天气。")
         self.assertEqual(response.action, "official.query_weather")

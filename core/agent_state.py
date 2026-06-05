@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.ui_formatter import observation_to_text
+
 
 @dataclass
 class AgentState:
@@ -13,7 +15,7 @@ class AgentState:
     plan: list[str] = field(default_factory=list)
     action: str = "none"
     params: dict[str, Any] = field(default_factory=dict)
-    observation: str = "无操作"
+    observation: Any = "无操作"
     reflection: str = ""
     response: str = ""
     reply: str = ""
@@ -48,7 +50,7 @@ class AgentResult:
             thought=state.thought,
             action=state.action,
             params=state.params,
-            action_result=state.observation,
+            action_result=observation_to_text(state.observation),
             response=state.response,
             runtime_nodes=list(state.runtime_nodes),
             thread_id=state.thread_id,
