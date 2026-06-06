@@ -41,6 +41,20 @@ class AgentLoopTest(unittest.TestCase):
         self.assertIn("查询天气、天气预报、气温、下雨情况", prompt)
         self.assertIn("Params 至少包含 city", prompt)
 
+    def test_prompt_routes_search_answer_requests_to_web_query(self):
+        prompt = build_agent_prompt(Memory(), "榴莲仅退款是哪个地区的", allow_chat=True)
+
+        self.assertIn("official.web_query", prompt)
+        self.assertIn("联网搜索、查询某个事件是什么、哪个地区", prompt)
+        self.assertIn("如果用户最终目的明显是获取答案", prompt)
+
+    def test_prompt_routes_latest_model_news_to_web_query(self):
+        prompt = build_agent_prompt(Memory(), "最新有什么新出来的大模型", allow_chat=True)
+
+        self.assertIn("official.web_query", prompt)
+        self.assertIn("最新热点、最近发布、新出来的大模型", prompt)
+        self.assertIn("也必须使用 official.web_query", prompt)
+
     def test_prompt_allows_autonomous_local_skill_install(self):
         prompt = build_agent_prompt(Memory(), "帮我写一个订单解析技能", allow_chat=True)
 

@@ -1,7 +1,19 @@
 from collections.abc import Callable
+import time
 
 from core.agent_checkpoint import AgentCheckpoint, NullCheckpoint
-from core.agent_nodes import AgentContext, execute_node, finalize_node, prepare_node, reflect_node
+from core.agent_nodes import (
+    AgentContext,
+    answer_check_node,
+    execute_node,
+    finalize_node,
+    prepare_node,
+    reflect_node,
+    rewrite_query_node,
+    search_retry_node,
+    synthesize_node,
+    understand_node,
+)
 from core.agent_state import AgentResult, AgentState
 from memory.memory import Memory
 
@@ -14,9 +26,19 @@ class AgentRuntime:
         self,
         nodes: list[AgentNode] | None = None,
         checkpoint: AgentCheckpoint | None = None,
-        max_steps: int = 8,
+        max_steps: int = 10,
     ) -> None:
-        self.nodes = nodes or [prepare_node, execute_node, reflect_node, finalize_node]
+        self.nodes = nodes or [
+            understand_node,
+            prepare_node,
+            rewrite_query_node,
+            execute_node,
+            search_retry_node,
+            reflect_node,
+            synthesize_node,
+            answer_check_node,
+            finalize_node,
+        ]
         self.checkpoint = checkpoint or NullCheckpoint()
         self.max_steps = max_steps
 
@@ -33,6 +55,7 @@ class AgentRuntime:
             user_input=user_input,
             allow_chat=allow_chat,
             history=list(memory.history),
+            runtime_started_at=time.monotonic(),
         )
         context = AgentContext(llm=llm, memory=memory)
 

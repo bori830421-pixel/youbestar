@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+from core.agent_nodes import build_synthesis_prompt
+from core.agent_state import AgentState
 from core.agent_checkpoint import InMemoryCheckpoint
 from core.agent_runtime import AgentRuntime
 from memory.memory import Memory
@@ -8,23 +10,42 @@ from memory.memory import Memory
 
 class FakeLLM:
     def __init__(self, response: str):
-        self.response = response
+        self.responses = [response] if isinstance(response, str) else list(response)
         self.prompts: list[str] = []
 
     def chat(self, prompt: str) -> str:
         self.prompts.append(prompt)
-        return self.response
+        return self.responses.pop(0)
 
 
 class AgentRuntimeTest(unittest.TestCase):
+    def assertDefaultRuntimeNodes(self, result):
+        self.assertEqual(
+            result.runtime_nodes,
+            [
+                "understand",
+                "prepare",
+                "rewrite_query",
+                "execute",
+                "search_retry",
+                "reflect",
+                "synthesize",
+                "answer_check",
+                "finalize",
+            ],
+        )
+
     def test_runtime_runs_natural_chat_through_owned_nodes(self):
         runtime = AgentRuntime()
         memory = Memory()
         llm = FakeLLM(
-            "Thought: 用户只是问候。\n"
-            "Action: none\n"
-            "Params: {}\n"
-            "Response: 你好，我在。"
+            [
+                '{"task_type":"chat","subject":"","sub_questions":[],"constraints":[],"needs_fresh_info":false,"expected_output":"自然回复","query_hints":[]}',
+                "Thought: 用户只是问候。\n"
+                "Action: none\n"
+                "Params: {}\n"
+                "Response: 你好，我在。",
+            ]
         )
 
         result = runtime.run(llm, memory, "你好", allow_chat=True, thread_id="chat-1")
@@ -32,8 +53,8 @@ class AgentRuntimeTest(unittest.TestCase):
         self.assertIn("# ✅ 回复", result.reply)
         self.assertIn("你好，我在。", result.response)
         self.assertEqual(result.action, "none")
-        self.assertEqual(result.runtime_nodes, ["prepare", "execute", "reflect", "finalize"])
-        self.assertEqual(result.step_count, 4)
+        self.assertDefaultRuntimeNodes(result)
+        self.assertEqual(result.step_count, 9)
         self.assertIn("你好 -> none -> 无操作", memory.get_summary())
 
     @patch("core.agent_nodes.run_approved_skill", return_value="汕头未来1天天气预报")
@@ -43,9 +64,13 @@ class AgentRuntimeTest(unittest.TestCase):
         runtime = AgentRuntime()
         memory = Memory()
         llm = FakeLLM(
-            "Thought: 用户查询天气。\n"
-            "Action: official.query_weather\n"
-            'Params: {"city": "汕头", "days": 1}'
+            [
+                '{"task_type":"tool_use","subject":"汕头天气","sub_questions":["汕头天气"],"constraints":[],"needs_fresh_info":true,"expected_output":"天气预报","query_hints":[]}',
+                "Thought: 用户查询天气。\n"
+                "Action: official.query_weather\n"
+                'Params: {"city": "汕头", "days": 1}',
+                '{"ok":true,"missing":[],"notes":"已覆盖天气查询"}',
+            ]
         )
 
         result = runtime.run(llm, memory, "汕头天气", allow_chat=True, thread_id="weather-1")
@@ -62,9 +87,13 @@ class AgentRuntimeTest(unittest.TestCase):
     def test_runtime_reflects_unknown_tool_as_natural_failure(self):
         runtime = AgentRuntime()
         llm = FakeLLM(
-            "Thought: 用户调用一个不存在的技能。\n"
-            "Action: local.missing_skill\n"
-            "Params: {}"
+            [
+                '{"task_type":"tool_use","subject":"missing skill","sub_questions":["调用 missing skill"],"constraints":[],"needs_fresh_info":false,"expected_output":"","query_hints":[]}',
+                "Thought: 用户调用一个不存在的技能。\n"
+                "Action: local.missing_skill\n"
+                "Params: {}",
+                '{"ok":true,"missing":[],"notes":"已说明失败"}',
+            ]
         )
 
         result = runtime.run(llm, Memory(), "调用 missing skill", allow_chat=True)
@@ -91,9 +120,13 @@ class AgentRuntimeTest(unittest.TestCase):
     def test_runtime_formats_structured_skill_result_without_dict_repr(self, approved_mock, enabled_mock, run_mock):
         runtime = AgentRuntime()
         llm = FakeLLM(
-            "Thought: 用户查询证券行情。\n"
-            "Action: local.query_market_data\n"
-            'Params: {"symbol": "300475"}'
+            [
+                '{"task_type":"tool_use","subject":"300475","sub_questions":["查询300475最新股价"],"constraints":[],"needs_fresh_info":true,"expected_output":"证券行情","query_hints":[]}',
+                "Thought: 用户查询证券行情。\n"
+                "Action: local.query_market_data\n"
+                'Params: {"symbol": "300475"}',
+                '{"ok":true,"missing":[],"notes":"已覆盖行情"}',
+            ]
         )
 
         result = runtime.run(llm, Memory(), "查询300475最新股价", allow_chat=True)
@@ -107,18 +140,248 @@ class AgentRuntimeTest(unittest.TestCase):
         checkpoint = InMemoryCheckpoint()
         runtime = AgentRuntime(checkpoint=checkpoint)
         llm = FakeLLM(
-            "Thought: 用户只是问候。\n"
-            "Action: none\n"
-            "Params: {}\n"
-            "Response: 你好。"
+            [
+                '{"task_type":"chat","subject":"","sub_questions":[],"constraints":[],"needs_fresh_info":false,"expected_output":"自然回复","query_hints":[]}',
+                "Thought: 用户只是问候。\n"
+                "Action: none\n"
+                "Params: {}\n"
+                "Response: 你好。",
+            ]
         )
 
         result = runtime.run(llm, Memory(), "你好", allow_chat=True, thread_id="checkpoint-thread")
 
-        self.assertEqual(result.runtime_nodes, ["prepare", "execute", "reflect", "finalize"])
+        self.assertDefaultRuntimeNodes(result)
         self.assertEqual([record["node"] for record in checkpoint.records], result.runtime_nodes)
         self.assertEqual(checkpoint.records[0]["thread_id"], "checkpoint-thread")
         self.assertIn("你好。", checkpoint.records[-1]["state"]["reply"])
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "web_search",
+            "title": "网页搜索结果",
+            "columns": ["来源", "标题", "摘要", "链接"],
+            "rows": [
+                [
+                    "搜狗",
+                    "榴莲遭遇仅退款新进展",
+                    "河南濮阳商家程大叔遭遇山东德州庆云县买家恶意仅退款。",
+                    "https://example.com/news",
+                ],
+                ["必应", "榴莲仅退款地区", "买家来自山东德州庆云县。", "https://example.com/2"],
+                ["腾讯新闻", "榴莲仅退款进展", "商家所在地为河南濮阳。", "https://example.com/3"],
+            ],
+            "summary": {
+                "查询关键词": "榴莲仅退款 是哪个地区",
+                "涉事买家地区": "山东德州庆云县",
+                "商家所在地": "河南濮阳",
+            },
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_runtime_synthesizes_web_query_results(self, approved_mock, enabled_mock, run_mock):
+        runtime = AgentRuntime()
+        llm = FakeLLM(
+            [
+                '{"task_type":"web_research","subject":"榴莲仅退款","sub_questions":["榴莲仅退款是哪个地区"],"constraints":["需要最新信息"],"needs_fresh_info":true,"expected_output":"结论和地区角色","query_hints":["榴莲仅退款 山东德州庆云县","榴莲仅退款 河南濮阳"]}',
+                "Thought: 用户要查询热点事件地区。\n"
+                "Action: official.web_query\n"
+                'Params: {"query": "榴莲仅退款 是哪个地区", "limit": 5}',
+                "结论：这次榴莲仅退款事件中，涉事买家地区是山东德州庆云县，商家所在地是河南濮阳。",
+                '{"ok":true,"missing":[],"notes":"已覆盖地区角色"}',
+            ]
+        )
+
+        result = runtime.run(llm, Memory(), "搜索榴莲仅退款，查询是哪个地区的榴莲仅退款", allow_chat=True)
+
+        self.assertEqual(result.action, "official.web_query")
+        self.assertIn("结论：这次榴莲仅退款事件中", result.reply)
+        self.assertIn("山东德州庆云县", result.reply)
+        self.assertIn("河南濮阳", result.reply)
+        self.assertNotIn("## 📊 数据明细", result.reply)
+        self.assertNotIn("{'ok': True", result.reply)
+        self.assertIn("搜索技能返回的结构化资料", llm.prompts[2])
+        run_mock.assert_called_once_with(
+            "official.web_query",
+            {
+                "query": "榴莲仅退款 是哪个地区",
+                "query_candidates": [
+                    "榴莲仅退款 是哪个地区",
+                    "榴莲仅退款 山东德州庆云县",
+                    "榴莲仅退款 河南濮阳",
+                    "榴莲仅退款 地区 榴莲仅退款是哪个地区",
+                    "榴莲仅退款 latest model",
+                ],
+                "limit": 5,
+            },
+        )
+
+    def test_synthesis_prompt_requires_answering_all_sub_questions(self):
+        state = AgentState(
+            thread_id="default",
+            user_input="gnes 是什么？他的官方网址是",
+            action="official.web_query",
+            observation={
+                "ok": True,
+                "kind": "web_search",
+                "title": "网页搜索结果",
+                "columns": ["来源", "标题", "摘要", "链接"],
+                "rows": [["搜狗", "Agnes AI", "Agnes AI 是多模态模型实验室，官网 agnes-ai.com", "https://agnes-ai.com/"]],
+                "summary": {"查询关键词": "gnes 是什么 官方网址"},
+            },
+        )
+
+        prompt = build_synthesis_prompt(state)
+
+        self.assertIn("必须覆盖的回答点", prompt)
+        self.assertIn("- 是什么", prompt)
+        self.assertIn("- 官方网址", prompt)
+        self.assertIn("如果用户一次问了多个问题，必须逐项回答", prompt)
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "web_search",
+            "title": "网页搜索结果",
+            "columns": ["来源", "标题", "摘要", "链接"],
+            "rows": [
+                ["搜狗", "Agnes AI", "Agnes AI 是多模态模型实验室，官网 agnes-ai.com", "https://agnes-ai.com/"],
+                ["必应", "Agnes AI official", "Agnes AI official website", "https://agnes-ai.com/"],
+                ["官网", "Agnes AI", "Official site", "https://agnes-ai.com/"],
+            ],
+            "summary": {"查询关键词": "gnes 是什么 官方网址"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_runtime_understands_rewrites_and_checks_multi_question_search(self, approved_mock, enabled_mock, run_mock):
+        runtime = AgentRuntime()
+        llm = FakeLLM(
+            [
+                '{"task_type":"web_research","subject":"Agnes AI","sub_questions":["Agnes AI 是什么","Agnes AI 的官方网址是什么"],"constraints":["需要官网"],"needs_fresh_info":true,"expected_output":"逐项回答","query_hints":["Agnes AI 是什么","Agnes AI 官方网址"]}',
+                "Thought: 用户询问需要搜索核验。\n"
+                "Action: official.web_query\n"
+                'Params: {"query": "gnes 是什么 官方网址", "limit": 5}',
+                "结论：Agnes AI 是一个多模态 AI 项目；官方网址是 https://agnes-ai.com/。",
+                '{"ok":true,"missing":[],"notes":"两个子问题都已覆盖"}',
+            ]
+        )
+
+        result = runtime.run(llm, Memory(), "gnes 是什么？他的官方网址是", allow_chat=True)
+
+        self.assertEqual(result.intent["subject"], "Agnes AI")
+        self.assertEqual(result.answer_check["ok"], True)
+        self.assertIn("Agnes AI 是一个多模态 AI 项目", result.reply)
+        self.assertIn("https://agnes-ai.com/", result.reply)
+        run_mock.assert_called_once_with(
+            "official.web_query",
+            {
+                "query": "gnes 是什么 官方网址",
+                "query_candidates": [
+                    "gnes 是什么 官方网址",
+                    "Agnes AI 是什么",
+                    "Agnes AI 官方网址",
+                    "Agnes AI 是什么 官方网址 Agnes AI 是什么 Agnes AI 的官方网址是什么",
+                    "Agnes AI latest model",
+                ],
+                "limit": 5,
+            },
+        )
+
+    def test_answer_check_appends_missing_answer_points(self):
+        runtime = AgentRuntime()
+        llm = FakeLLM(
+            [
+                '{"task_type":"chat","subject":"Agnes AI","sub_questions":["Agnes AI 是什么","Agnes AI 的官方网址是什么"],"constraints":[],"needs_fresh_info":false,"expected_output":"逐项回答","query_hints":[]}',
+                "Thought: 已有足够上下文。\n"
+                "Action: none\n"
+                "Params: {}\n"
+                "Response: Agnes AI 是一个多模态 AI 项目。",
+                '{"ok":false,"missing":["官方网址"],"notes":"回答缺少官网"}',
+            ]
+        )
+
+        result = runtime.run(llm, Memory(), "Agnes 是什么？官网是", allow_chat=True)
+
+        self.assertIn("Agnes AI 是一个多模态 AI 项目", result.reply)
+        self.assertIn("补充说明", result.reply)
+        self.assertIn("官方网址", result.reply)
+
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_web_query_retries_once_when_results_are_too_few(self, approved_mock, enabled_mock):
+        first_result = {
+            "ok": True,
+            "kind": "web_search",
+            "title": "网页搜索结果",
+            "columns": ["来源", "标题", "摘要", "链接"],
+            "rows": [["官网", "Tesla 官网", "Tesla 官方网站", "https://www.tesla.com/"]],
+            "summary": {"查询关键词": "Tesla 最新车型"},
+        }
+        second_result = {
+            "ok": True,
+            "kind": "web_search",
+            "title": "网页搜索结果",
+            "columns": ["来源", "标题", "摘要", "链接"],
+            "rows": [
+                ["官网", "Tesla Model Y", "Tesla new Model Y", "https://www.tesla.com/modely"],
+                ["必应", "Tesla Model Y Juniper", "发布时间信息", "https://example.com/1"],
+                ["搜狗", "Tesla latest model", "官网链接", "https://example.com/2"],
+            ],
+            "summary": {"查询关键词": "Tesla latest model"},
+        }
+        llm = FakeLLM(
+            [
+                '{"task_type":"web_research","subject":"Tesla","sub_questions":["Tesla最新车型名称","Tesla发布时间","Tesla官网链接"],"constraints":["需要最新信息"],"needs_fresh_info":true,"expected_output":"逐项回答","query_hints":["Tesla latest model","Tesla Model Y Juniper","Tesla new Model Y","Tesla official"]}',
+                "Thought: 用户需要搜索最新车型信息。\n"
+                "Action: official.web_query\n"
+                'Params: {"query": "Tesla 最新车型", "limit": 5}',
+                "结论：Tesla 最新车型相关结果包括 Model Y Juniper，官网链接见 Tesla 官网。",
+                '{"ok":true,"missing":[],"notes":"已覆盖"}',
+            ]
+        )
+
+        with patch("core.agent_nodes.run_approved_skill", side_effect=[first_result, second_result]) as run_mock:
+            result = AgentRuntime().run(llm, Memory(), "告诉我 Tesla 最新车型的名字、发布时间和官网链接")
+
+        self.assertEqual(result.action, "official.web_query")
+        self.assertEqual(run_mock.call_count, 2)
+        self.assertEqual(result.params["query"], "Tesla latest model")
+        self.assertEqual(result.stop_reason, "")
+        self.assertIn("Model Y Juniper", result.reply)
+
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_web_query_stops_after_two_search_rounds(self, approved_mock, enabled_mock):
+        sparse_result = {
+            "ok": True,
+            "kind": "web_search",
+            "title": "网页搜索结果",
+            "columns": ["来源", "标题", "摘要", "链接"],
+            "rows": [["官网", "Tesla 官网", "Tesla 官方网站", "https://www.tesla.com/"]],
+            "summary": {"查询关键词": "Tesla 最新车型"},
+        }
+        llm = FakeLLM(
+            [
+                '{"task_type":"web_research","subject":"Tesla","sub_questions":["Tesla最新车型名称","Tesla发布时间","Tesla官网链接"],"constraints":["需要最新信息"],"needs_fresh_info":true,"expected_output":"逐项回答","query_hints":["Tesla latest model","Tesla Model Y Juniper"]}',
+                "Thought: 用户需要搜索最新车型信息。\n"
+                "Action: official.web_query\n"
+                'Params: {"query": "Tesla 最新车型", "limit": 5}',
+                "只能确认 Tesla 官网，车型名称和发布时间仍需人工确认。",
+                '{"ok":false,"missing":["车型名称","发布时间"],"notes":"部分缺失"}',
+            ]
+        )
+
+        with patch("core.agent_nodes.run_approved_skill", side_effect=[sparse_result, sparse_result]) as run_mock:
+            result = AgentRuntime().run(llm, Memory(), "告诉我 Tesla 最新车型的名字、发布时间和官网链接")
+
+        self.assertEqual(run_mock.call_count, 2)
+        self.assertEqual(result.stop_reason, "search_limit_reached")
+        self.assertIn("部分查询结果", result.action_result)
 
 
 if __name__ == "__main__":

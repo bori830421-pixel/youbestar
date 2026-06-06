@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from agent_system import manager
+from agent_system.skill_registry import canonical_skill_name
 
 
 class SkillRegistryTest(unittest.TestCase):
@@ -38,6 +39,7 @@ class SkillRegistryTest(unittest.TestCase):
     def test_normalizes_plain_skill_names_to_local_namespace(self):
         self.assertEqual(manager.normalize_skill_id("parse_order"), "local.parse_order")
         self.assertEqual(manager.normalize_skill_id("official.open_browser"), "official.open_browser")
+        self.assertEqual(canonical_skill_name("web_query"), "official.web_query")
         self.assertEqual(
             manager.normalize_skill_id("community.user123.parse_order"),
             "community.user123.parse_order",

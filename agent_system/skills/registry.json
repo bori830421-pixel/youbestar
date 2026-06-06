@@ -7,6 +7,14 @@
     "description": "根据 URL 打开系统默认浏览器。",
     "author": "youbestar"
   },
+  "official.web_query": {
+    "path": "agent_system/skills/official/web_query.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "网页查询",
+    "description": "根据关键词自动尝试多个中文搜索源，查询热点新闻、最新事件和网页结果并返回结构化结果。",
+    "author": "youbestar"
+  },
   "official.query_weather": {
     "path": "agent_system/skills/official/query_weather.py",
     "version": "1.0.0",

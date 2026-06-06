@@ -78,6 +78,21 @@ class UiFormatterTest(unittest.TestCase):
         self.assertIn("| **香农芯创** | **300475** | 171.9 |", result)
         self.assertIn("标的名称：**香农芯创**", result)
 
+    def test_successful_structured_result_is_not_failed_by_text_markers(self):
+        result = format_skill_result(
+            {
+                "ok": True,
+                "kind": "web_search",
+                "title": "网页搜索结果",
+                "columns": ["标题", "摘要"],
+                "rows": [["榴莲仅退款新进展", "复议失败后平台退回货款"]],
+                "summary": {"涉事买家地区": "山东德州庆云县"},
+            }
+        )
+
+        self.assertIn("# 🔍 网页搜索结果", result)
+        self.assertNotIn("# ❌ 执行失败", result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,9 +27,19 @@ class ServerChatRuntimeTest(unittest.TestCase):
             params={},
             action_result="无操作",
             response="你好，我在。",
-            runtime_nodes=["prepare", "execute", "reflect", "finalize"],
+            runtime_nodes=[
+                "understand",
+                "prepare",
+                "rewrite_query",
+                "execute",
+                "search_retry",
+                "reflect",
+                "synthesize",
+                "answer_check",
+                "finalize",
+            ],
             thread_id="default",
-            step_count=4,
+            step_count=9,
         )
 
         with patch.object(server.agent_runtime, "run", return_value=result) as run_mock:

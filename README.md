@@ -303,6 +303,7 @@ run(params)
 official.list_files
 official.read_file
 official.write_project_file
+official.web_query
 local.query_market_data
 ```
 
@@ -317,6 +318,14 @@ local.query_market_data
 ```
 
 它仍会阻止写入敏感路径，例如 `.git`、`.venv`、`youbestar.json`、token、cookie、credential、secret 等命名的文件。
+
+官方网页查询技能：
+
+```text
+official.web_query
+```
+
+用途：根据关键词自动尝试多个中文搜索源并返回结构化结果。适用于“帮我搜一下”“哪个地区”“这件事是什么情况”“最新有什么新出来的大模型”等需要直接给出答案的场景，不应退化成只打开百度页面或写死单一搜索源。
 
 本地证券行情技能：
 

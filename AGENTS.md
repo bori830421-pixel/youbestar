@@ -34,6 +34,10 @@ AgentState -> AgentNode -> AgentRuntime -> AgentPolicy -> AgentCheckpoint
 
 Do not keep adding one-off branches to `/chat` when the behavior belongs in the runtime.
 
+Language understanding, query rewriting, synthesis, and answer completeness checks belong in the runtime node chain, not inside individual skills. Skills should provide observations; runtime nodes decide how to understand the user, improve tool parameters, synthesize evidence, and verify the final answer.
+
+Runtime search behavior must follow finite planning, finite retry, and fast failure. Do not add unbounded Agent loops, unbounded Critic loops, or recursive search retries. Keep hard limits for search rounds, tool calls, and runtime.
+
 ## Skill responsibility boundary
 
 Skills must do business work and return structured results. Skills must not own final user-facing rendering.
@@ -127,7 +131,23 @@ Browser capability must distinguish:
 - desktop/visible browser: for user-visible pages, login, manual inspection, screenshots.
 - headless browser: for background search, scraping, extraction, and validation.
 
+Verified handling:
+
+- For requests like "搜索 X 并告诉我结果" or "哪个地区", do not route to `official.open_browser` only. Add or use a query skill that returns structured data, and keep `official.open_browser` for explicit page-opening intent.
+- Web/news queries must not hard-code a single search provider. Prefer an `auto` provider that can try multiple mainland-accessible Chinese search/news sources and return the source name in structured rows.
+- Search retry is capped: first search uses the original query, second search may use rewritten query candidates, and no third search is allowed.
+
 ## Sensitive local files
 
 Never upload or expose `youbestar.json`, `.env`, credentials, tokens, cookies, or `.git` internals.
+
+## Memory management
+
+Memory must be layered and conservative:
+
+- Short-term memory may keep recent interaction context for immediate understanding and references.
+- Temporary/chatty memory must not be promoted to long-term memory.
+- Long-term memory is only for confirmed business facts such as customers, SKU, orders, ERP records, finance reports, and transactions.
+- Model context for business operations must use only short-term memory plus confirmed long-term memory; never include unconfirmed candidates or casual temporary notes.
+- Long-term memory should be isolated by business module to avoid ERP, private sales, Excel, and chat contexts polluting each other.
 

@@ -175,6 +175,8 @@ def format_skill_result(result: Any) -> str:
 
 
 def format_tool_result(action: str, result: Any) -> str:
+    if isinstance(result, dict) and result.get("ok") is not False:
+        return format_skill_result(result)
     text = observation_to_text(result)
     if "失败" in text or "错误" in text or "未知工具" in text or "技能已关闭" in text or "error" in text.lower():
         return format_error(text)

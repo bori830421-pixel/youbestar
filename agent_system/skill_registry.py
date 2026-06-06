@@ -15,6 +15,11 @@ BUILTIN_SKILLS = {
         "title": "打开浏览器",
         "description": "根据 URL 打开系统默认浏览器。",
     },
+    "official.web_query": {
+        "type": "official",
+        "title": "网页查询",
+        "description": "根据关键词自动尝试多个中文搜索源，查询热点新闻、最新事件和网页结果并返回结构化结果。",
+    },
     "official.query_weather": {
         "type": "official",
         "title": "查询天气",
@@ -59,6 +64,9 @@ BUILTIN_SKILLS = {
 
 LEGACY_SKILL_ALIASES = {
     "open_browser": "official.open_browser",
+    "web_query": "official.web_query",
+    "search_web": "official.web_query",
+    "web_search": "official.web_query",
     "query_weather": "official.query_weather",
     "weather": "official.query_weather",
     "write_skill": "official.write_skill",
