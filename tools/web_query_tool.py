@@ -8,7 +8,7 @@ from core.http_client import fetch_text
 
 
 DEFAULT_PROVIDER = "auto"
-DEFAULT_PROVIDERS = ("baidu", "bing_cn", "sogou")
+DEFAULT_PROVIDERS = ("baidu", "bing_cn", "sogou", "bing_global", "duckduckgo")
 EVENT_REGION_HINTS = (
     ("山东德州庆云县", ("山东德州庆云", "德州市庆云县", "庆云县")),
     ("山东德州", ("山东德州", "德州市")),
@@ -131,6 +131,24 @@ def _extract_sogou_html_results(payload: str) -> list[dict[str, str]]:
     return results
 
 
+def _extract_duckduckgo_html_results(payload: str) -> list[dict[str, str]]:
+    blocks = re.findall(
+        r'(?is)<div[^>]+class=["\'][^"\']*result[^"\']*["\'][^>]*>.*?(?=<div[^>]+class=["\'][^"\']*result[^"\']*["\']|</body>)',
+        payload or "",
+    )
+    results: list[dict[str, str]] = []
+    for block in blocks:
+        title_match = re.search(r'(?is)<a[^>]+class=["\'][^"\']*result__a[^"\']*["\'][^>]*>.*?</a>', block)
+        link_match = re.search(r'(?is)<a[^>]+href=["\']([^"\']+)["\']', title_match.group(0) if title_match else block)
+        snippet_match = re.search(r'(?is)<a[^>]+class=["\'][^"\']*result__snippet[^"\']*["\'][^>]*>.*?</a>|<div[^>]+class=["\'][^"\']*result__snippet[^"\']*["\'][^>]*>.*?</div>', block)
+        title = _clean_html_text(title_match.group(0) if title_match else "")
+        snippet = _clean_html_text(snippet_match.group(0) if snippet_match else block)
+        url = unescape(link_match.group(1)).strip() if link_match else "-"
+        if title or snippet:
+            results.append(_result("DuckDuckGo", title, snippet, url))
+    return results
+
+
 def _build_baidu_url(query: str, limit: int) -> str:
     encoded = urllib.parse.quote(query)
     return f"https://www.baidu.com/s?wd={encoded}&rn={max(1, min(limit, 10))}&tn=json"
@@ -144,6 +162,16 @@ def _build_baidu_html_url(query: str, limit: int) -> str:
 def _build_bing_cn_url(query: str, limit: int) -> str:
     encoded = urllib.parse.quote(query)
     return f"https://cn.bing.com/search?q={encoded}&count={max(1, min(limit, 10))}&cc=cn&setlang=zh-cn"
+
+
+def _build_bing_global_url(query: str, limit: int) -> str:
+    encoded = urllib.parse.quote(query)
+    return f"https://www.bing.com/search?q={encoded}&count={max(1, min(limit, 10))}&setlang=zh-cn"
+
+
+def _build_duckduckgo_url(query: str, limit: int) -> str:
+    encoded = urllib.parse.quote(query)
+    return f"https://duckduckgo.com/html/?q={encoded}&kl=wt-wt&s=0&df=d"
 
 
 def _build_sogou_url(query: str, limit: int) -> str:
@@ -168,8 +196,15 @@ def _fetch_provider_results(provider: str, query: str, limit: int) -> list[dict[
         return _extract_baidu_html_results(fetch_text(_build_baidu_html_url(query, limit)))
     if provider == "bing_cn":
         return _extract_bing_html_results(fetch_text(_build_bing_cn_url(query, limit)))
+    if provider == "bing_global":
+        results = _extract_bing_html_results(fetch_text(_build_bing_global_url(query, limit)))
+        for item in results:
+            item["source"] = "Bing"
+        return results
     if provider == "sogou":
         return _extract_sogou_html_results(fetch_text(_build_sogou_url(query, limit)))
+    if provider == "duckduckgo":
+        return _extract_duckduckgo_html_results(fetch_text(_build_duckduckgo_url(query, limit)))
     return []
 
 

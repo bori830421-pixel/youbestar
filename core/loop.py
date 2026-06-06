@@ -115,7 +115,7 @@ allowChat={str(allow_chat)}
 
 规则:
 1. 如果用户明确要求打开网页、打开网站、打开百度、在浏览器中打开链接等，使用 official.open_browser。
-2. 如果用户要求联网搜索、查询某个事件是什么、哪个地区、帮我搜并告诉我结果、最新热点、最近发布、新出来的大模型/产品/政策/新闻等，优先使用 official.web_query，Params 至少包含 query，可选 limit。不要指定单一搜索源，除非用户明确要求。
+2. 如果用户要求联网搜索、查询某个事件是什么、哪个地区、帮我搜并告诉我结果、最新热点、最近发布、新出来的大模型/产品/政策/新闻等，优先使用 official.web_query，Params 至少包含 query，可选 limit。不要指定单一搜索源，除非用户明确要求；网络环境允许时，搜索工具会自动尝试外网搜索引擎和信息源。
 3. 如果用户要求查询天气、天气预报、气温、下雨情况等，使用 official.query_weather，Params 至少包含 city，可选 days。
 4. 如果用户要求创建或改进技能，使用 official.install_local_skill，Params 包含 skill_name、code、description，可选 title、version、overwrite。
 5. 如果用户要求你直接在运行目录、项目目录或指定普通文件中写入/修改内容，使用 official.write_project_file，Params 包含 path、content，可选 overwrite。

@@ -21,7 +21,7 @@ class AgentState:
     max_search_round: int = 2
     max_tool_call: int = 10
     runtime_started_at: float = 0.0
-    max_runtime_seconds: float = 15.0
+    max_runtime_seconds: float = 25.0
     stop_reason: str = ""
     search_assessment: dict[str, Any] = field(default_factory=dict)
     reflection: str = ""

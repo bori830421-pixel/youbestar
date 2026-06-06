@@ -12,7 +12,7 @@
     "version": "1.0.0",
     "source": "official",
     "title": "网页查询",
-    "description": "根据关键词自动尝试多个中文搜索源，查询热点新闻、最新事件和网页结果并返回结构化结果。",
+    "description": "根据关键词自动尝试多个搜索源；网络允许时会使用外网搜索引擎和信息源，查询热点新闻、最新事件和网页结果并返回结构化结果。",
     "author": "youbestar"
   },
   "official.query_weather": {

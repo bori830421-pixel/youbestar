@@ -134,7 +134,7 @@ Browser capability must distinguish:
 Verified handling:
 
 - For requests like "搜索 X 并告诉我结果" or "哪个地区", do not route to `official.open_browser` only. Add or use a query skill that returns structured data, and keep `official.open_browser` for explicit page-opening intent.
-- Web/news queries must not hard-code a single search provider. Prefer an `auto` provider that can try multiple mainland-accessible Chinese search/news sources and return the source name in structured rows.
+- Web/news queries must not hard-code a single search provider. Prefer an `auto` provider that tries mainland-accessible Chinese sources first and, when the current network environment allows it, also tries external search engines and information sources. Return the source name in structured rows.
 - Search retry is capped: first search uses the original query, second search may use rewritten query candidates, and no third search is allowed.
 
 ## Sensitive local files

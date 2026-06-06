@@ -54,7 +54,32 @@ class WebQueryToolTest(unittest.TestCase):
         self.assertIn("河南濮阳商家榴莲仅退款案", result["rows"][0][1])
 
     @patch("tools.web_query_tool.fetch_text")
-    def test_web_query_auto_tries_multiple_chinese_sources(self, fetch_text_mock):
+    def test_web_query_auto_tries_mainland_and_external_sources_when_network_allows(self, fetch_text_mock):
+        fetch_text_mock.side_effect = [
+            '{"feed":{"entry":[]}}',
+            "<html><body></body></html>",
+            "<html><body></body></html>",
+            "<html><body></body></html>",
+            "<html><body></body></html>",
+            """
+            <html><body>
+              <div class="result">
+                <a class="result__a" href="https://example.com/model">最新大模型发布</a>
+                <a class="result__snippet">国内外厂商发布新的多模态大模型。</a>
+              </div>
+            </body></html>
+            """,
+        ]
+
+        result = web_query({"query": "最新有什么新出来的大模型", "limit": 5})
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["rows"][0][0], "DuckDuckGo")
+        self.assertEqual(result["rows"][0][1], "最新大模型发布")
+        self.assertEqual(result["summary"]["搜索来源"], "baidu, bing_cn, sogou, bing_global, duckduckgo")
+
+    @patch("tools.web_query_tool.fetch_text")
+    def test_web_query_skips_unreachable_external_sources(self, fetch_text_mock):
         fetch_text_mock.side_effect = [
             '{"feed":{"entry":[]}}',
             "<html><body></body></html>",
@@ -73,7 +98,6 @@ class WebQueryToolTest(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(result["rows"][0][0], "必应")
         self.assertEqual(result["rows"][0][1], "最新国产大模型发布")
-        self.assertEqual(result["summary"]["搜索来源"], "baidu, bing_cn, sogou")
 
 
 if __name__ == "__main__":
