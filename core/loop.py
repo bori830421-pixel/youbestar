@@ -30,6 +30,7 @@ def build_agent_prompt(memory: Memory, user_input: str, allow_chat: bool = True)
     registered_skills = enabled_approved_skill_names()
     registered_skill_text = ", ".join(registered_skills) if registered_skills else "暂无"
     history = memory.get_summary() or "暂无"
+    business_memory = memory.get_business_summary() or "暂无"
     mode_rules = (
         """
 当 allowChat=True 时：
@@ -92,6 +93,14 @@ allowChat={str(allow_chat)}
 
 历史信息:
 {history}
+
+已确认长期业务记忆:
+{business_memory}
+
+记忆使用规则:
+- 只能使用短期历史和上面的已确认长期业务记忆。
+- 不要使用未确认候选记忆、临时闲聊记忆或猜测信息来执行 ERP、订单、SKU、客户、财务相关任务。
+- 如果长期记忆不足，明确说明需要用户补充或确认，不要自动固化。
 
 权限规则:
 1. 你可以自主创建、更新并注册 local.* 技能。

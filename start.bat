@@ -29,7 +29,7 @@ if not exist "%VENV_PY%" (
     )
 )
 
-"%VENV_PY%" -c "import fastapi, uvicorn, requests, langgraph" >nul 2>nul
+"%VENV_PY%" -c "import fastapi, uvicorn, requests" >nul 2>nul
 if errorlevel 1 (
     echo Installing dependencies from requirements.txt...
     "%VENV_PY%" -m pip install -r "%APP_DIR%requirements.txt"

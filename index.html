@@ -251,6 +251,55 @@
       color: currentColor;
     }
 
+    .memory-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(22, 24, 29, 0.28);
+    }
+
+    .memory-dialog {
+      width: min(460px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .memory-fields {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 8px 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7f8fa;
+      font-size: 14px;
+    }
+
+    .memory-fields dt {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .memory-fields dd {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .memory-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .app-shell {
       min-height: 0;
       display: grid;
@@ -1350,10 +1399,6 @@
                 <input id="allow-chat-toggle" type="checkbox" checked>
                 <span id="allow-chat-label">允许闲聊</span>
               </label>
-              <label class="chat-toggle" title="开启后通过独立 LangGraph 状态图处理当前对话">
-                <input id="langgraph-toggle" type="checkbox">
-                <span id="langgraph-label">LangGraph 实验</span>
-              </label>
               <span id="mode-hint" class="mode-label">显示思考/工具调用</span>
               <span class="composer-spacer"></span>
               <span id="enabled-skill-count">技能 0 / 0</span>
@@ -1425,10 +1470,26 @@
     </div>
   </section>
 
+  <div id="memory-overlay" class="memory-overlay" hidden>
+    <section class="memory-dialog" role="dialog" aria-modal="true" aria-labelledby="memory-title">
+      <div>
+        <h2 id="memory-title">检测到业务信息</h2>
+        <p class="subtle">是否保存到长期业务记忆？确认后才会参与 ERP、订单、客户、SKU、财务等业务推理。</p>
+      </div>
+      <dl id="memory-fields" class="memory-fields"></dl>
+      <div id="memory-status" class="status"></div>
+      <div class="memory-actions">
+        <button id="memory-reject-button" class="ghost-button" type="button">忽略</button>
+        <button id="memory-confirm-button" class="primary-button" type="button">确认保存</button>
+      </div>
+    </section>
+  </div>
+
   <script>
     const API_ORIGIN = "http://127.0.0.1:8000";
     const CHAT_URL = `${API_ORIGIN}/chat`;
-    const LANGGRAPH_CHAT_URL = `${API_ORIGIN}/langgraph/chat`;
+    const MEMORY_CONFIRM_URL = `${API_ORIGIN}/memory/confirm`;
+    const MEMORY_REJECT_URL = `${API_ORIGIN}/memory/reject`;
     const CONFIG_URL = `${API_ORIGIN}/config`;
     const MODELS_DISCOVER_URL = `${API_ORIGIN}/models/discover`;
     const REGISTRY_URL = `${API_ORIGIN}/skills/registry`;
@@ -1461,12 +1522,15 @@
     const chatForm = document.getElementById("chat-form");
     const input = document.getElementById("message-input");
     const sendButton = document.getElementById("send-button");
+    const memoryOverlay = document.getElementById("memory-overlay");
+    const memoryFields = document.getElementById("memory-fields");
+    const memoryStatus = document.getElementById("memory-status");
+    const memoryConfirmButton = document.getElementById("memory-confirm-button");
+    const memoryRejectButton = document.getElementById("memory-reject-button");
     const toggleThoughtButton = document.getElementById("toggle-thought-button");
     const toggleToolButton = document.getElementById("toggle-tool-button");
     const allowChatToggle = document.getElementById("allow-chat-toggle");
     const allowChatLabel = document.getElementById("allow-chat-label");
-    const langGraphToggle = document.getElementById("langgraph-toggle");
-    const langGraphLabel = document.getElementById("langgraph-label");
     const modeHint = document.getElementById("mode-hint");
     const backConfigButton = document.getElementById("back-config-button");
     const logoutButton = document.getElementById("logout-button");
@@ -1488,6 +1552,7 @@
     let selectedSkillName = "";
     let showThoughtMode = false;
     let showToolMode = false;
+    let activeMemoryCandidate = null;
 
     function getConfig() {
       return {
@@ -1840,8 +1905,7 @@
         message.action !== undefined ||
         message.params !== undefined ||
         message.action_result !== undefined ||
-        message.response !== undefined ||
-        message.graph_nodes !== undefined
+        message.response !== undefined
       );
     }
 
@@ -1873,7 +1937,6 @@
 
       if (showToolMode) {
         appendToolCard(bubble, message);
-        appendLangGraphCard(bubble, message);
       }
     }
 
@@ -2074,19 +2137,6 @@
       body.appendChild(resultBlock);
     }
 
-    function appendLangGraphCard(parent, message) {
-      if (!message.graph_nodes || !message.graph_nodes.length) {
-        return;
-      }
-      const body = appendTraceCard(parent, {
-        className: "tool-ok",
-        title: "LangGraph nodes",
-        code: `turn ${message.turn_count || 1}`,
-        status: "GRAPH",
-      });
-      body.textContent = message.graph_nodes.join(" → ");
-    }
-
     function formatJson(value) {
       try {
         return JSON.stringify(value || {}, null, 2);
@@ -2114,11 +2164,6 @@
       allowChatToggle.title = allowChatToggle.checked ? "Chat On：允许自然回复" : "Chat Off：只做任务判断";
     }
 
-    function updateLangGraphLabel() {
-      langGraphLabel.textContent = langGraphToggle.checked ? "LangGraph 已开启" : "LangGraph 实验";
-      langGraphToggle.title = langGraphToggle.checked ? "当前对话通过 LangGraph 状态图处理" : "当前对话使用原有 Agent loop";
-    }
-
     function addMessage(role, content, error = false, extra = {}) {
       if (!activeConversation()) {
         createConversation();
@@ -2141,23 +2186,88 @@
       return record;
     }
 
+    function normalizeMemoryCandidate(candidate) {
+      if (!candidate) return null;
+      return candidate.candidate || candidate;
+    }
+
+    function memoryFieldRows(candidate) {
+      const normalized = normalizeMemoryCandidate(candidate) || {};
+      const metadata = normalized.metadata || {};
+      return [
+        ["客户/主体", normalized.entity || metadata.entity || metadata.customer || "未识别"],
+        ["SKU", normalized.sku || metadata.sku || "未识别"],
+        ["数量", normalized.qty || metadata.qty || metadata.quantity || "未识别"],
+        ["任务", normalized.task_tag || metadata.task_tag || normalized.module || "general"],
+        ["来源", normalized.source || metadata.source || "auto_detected"],
+      ];
+    }
+
+    function showMemoryCandidate(candidate) {
+      const normalized = normalizeMemoryCandidate(candidate);
+      if (!normalized || memoryOverlay.hidden === false) {
+        return;
+      }
+      activeMemoryCandidate = normalized;
+      memoryStatus.textContent = "";
+      memoryStatus.className = "status";
+      memoryFields.innerHTML = "";
+      memoryFieldRows(normalized).forEach(([label, value]) => {
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.textContent = String(value);
+        memoryFields.appendChild(dt);
+        memoryFields.appendChild(dd);
+      });
+      memoryOverlay.hidden = false;
+    }
+
+    async function submitMemoryDecision(url, label) {
+      if (!activeMemoryCandidate) {
+        memoryOverlay.hidden = true;
+        return;
+      }
+      memoryConfirmButton.disabled = true;
+      memoryRejectButton.disabled = true;
+      memoryStatus.textContent = `${label}中...`;
+      memoryStatus.className = "status";
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ index: -1 }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || `${label}失败`);
+        }
+        activeMemoryCandidate = null;
+        memoryOverlay.hidden = true;
+      } catch (error) {
+        memoryStatus.textContent = `${label}失败：${error.message}`;
+        memoryStatus.className = "status error";
+      } finally {
+        memoryConfirmButton.disabled = false;
+        memoryRejectButton.disabled = false;
+      }
+    }
+
     async function sendMessage(message) {
       const allowChat = allowChatToggle.checked;
-      const useLangGraph = langGraphToggle.checked;
       const conversation = activeConversation();
-      const requestUrl = useLangGraph ? LANGGRAPH_CHAT_URL : CHAT_URL;
       const previousHistory = conversation ? conversation.history.slice(-20).map((item) => ({
         role: item.role,
         content: item.role === "assistant" ? (item.response || item.model_reply || item.content || "") : item.content,
       })) : [];
 
       addMessage("user", message);
-      const loadingMessage = addMessage("assistant", "正在思考...", false, { pending: true, allowChat, useLangGraph });
+      const loadingMessage = addMessage("assistant", "正在思考...", false, { pending: true, allowChat });
       input.disabled = true;
       sendButton.disabled = true;
 
       try {
-        const response = await fetch(requestUrl, {
+        const response = await fetch(CHAT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2186,15 +2296,13 @@
           params: data.params || {},
           action_result: actionResult,
           response: data.response || "",
-          graph_nodes: data.graph_nodes || [],
-          turn_count: data.turn_count || 0,
-          engine: data.engine || "classic",
           allowChat,
           pending: false,
           error: false,
         });
         saveStoredConversations();
         renderMessages();
+        showMemoryCandidate(data.memory_candidate);
       } catch (error) {
         Object.assign(loadingMessage, {
           content: `错误：${error.message}`,
@@ -2505,13 +2613,11 @@
     allowChatToggle.addEventListener("change", () => {
       updateAllowChatLabel();
     });
-    langGraphToggle.addEventListener("change", () => {
-      updateLangGraphLabel();
-    });
+    memoryConfirmButton.addEventListener("click", () => submitMemoryDecision(MEMORY_CONFIRM_URL, "保存"));
+    memoryRejectButton.addEventListener("click", () => submitMemoryDecision(MEMORY_REJECT_URL, "忽略"));
 
     updateModeButtons();
     updateAllowChatLabel();
-    updateLangGraphLabel();
     loadConfig();
   </script>
 </body>

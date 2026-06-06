@@ -1,5 +1,8 @@
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
 
+from core.loop import build_agent_prompt
 from memory.memory import Memory
 
 
@@ -72,6 +75,83 @@ class MemoryManagementTest(unittest.TestCase):
         self.assertIn("ERP 入库单", erp_context["long_term"][0]["content"])
         self.assertEqual(len(sales_context["long_term"]), 1)
         self.assertIn("私域客户", sales_context["long_term"][0]["content"])
+
+    def test_detects_business_memory_candidate_without_auto_confirming(self):
+        memory = Memory()
+
+        result = memory.detect_business_memory_candidate(
+            "客户A 下单 SKU-001 共 20 件",
+            action="local.parse_order",
+            result="订单解析完成",
+            module="private_sales",
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["reason"], "confirmation_required")
+        self.assertEqual(result["candidate"]["sku"], "SKU-001")
+        self.assertEqual(result["candidate"]["qty"], 20)
+        self.assertEqual(len(memory.pending_candidates), 1)
+        self.assertEqual(memory.get_model_context("private_sales")["long_term"], [])
+
+    def test_confirmed_memory_persists_to_json_file(self):
+        with TemporaryDirectory() as temp_dir:
+            storage_path = Path(temp_dir) / "memory.json"
+            memory = Memory(storage_path=storage_path)
+            memory.propose_long_term(
+                "客户张三 下单 SKU123 共 2 件",
+                "order",
+                module="private_sales",
+                metadata={"entity": "客户张三", "sku": "SKU123", "qty": 2, "source": "微信消息"},
+            )
+
+            confirmed = memory.confirm_pending()
+            reloaded = Memory(storage_path=storage_path)
+
+            self.assertTrue(confirmed["ok"])
+            self.assertTrue(storage_path.exists())
+            context = reloaded.get_model_context("private_sales")
+            self.assertEqual(len(context["long_term"]), 1)
+            self.assertEqual(context["long_term"][0]["metadata"]["entity"], "客户张三")
+
+    def test_confirmed_memory_is_compressed_by_entity_sku_quantity(self):
+        memory = Memory()
+        memory.propose_long_term(
+            "张三 买 SKU123 2件",
+            "order",
+            module="private_sales",
+            metadata={"entity": "张三", "sku": "SKU123", "qty": 2},
+        )
+        memory.confirm_pending()
+        memory.propose_long_term(
+            "张三 买 SKU123 3件",
+            "order",
+            module="private_sales",
+            metadata={"entity": "张三", "sku": "SKU123", "qty": 3},
+        )
+
+        memory.confirm_pending()
+
+        context = memory.get_model_context("private_sales")
+        self.assertEqual(len(context["long_term"]), 1)
+        self.assertEqual(context["long_term"][0]["metadata"]["qty"], 5)
+        self.assertIn("共买 SKU123 5", context["long_term"][0]["content"])
+
+    def test_agent_prompt_uses_confirmed_long_term_memory_only(self):
+        memory = Memory()
+        memory.propose_long_term(
+            "客户张三 下单 SKU123 共 2 件",
+            "order",
+            module="private_sales",
+            metadata={"entity": "客户张三", "sku": "SKU123", "qty": 2},
+        )
+        memory.confirm_pending()
+        memory.propose_long_term("客户李四 下单 SKU999 共 1 件", "order", module="private_sales")
+
+        prompt = build_agent_prompt(memory, "张三上次买了什么？")
+
+        self.assertIn("已确认长期业务记忆", prompt)
+        self.assertIn("客户张三 下单 SKU123 共 2 件", prompt)
+        self.assertNotIn("客户李四 下单 SKU999", prompt)
 
 
 if __name__ == "__main__":

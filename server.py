@@ -9,12 +9,11 @@ from pydantic import BaseModel, Field
 from agent_system.server import router as skills_router
 from core.agent_runtime import AgentRuntime
 from core.config import ModelConfig, load_config, save_config_file
-from core.langgraph_bridge import LangGraphBridge
 from core.llm import LLM
 from core.loop import agent_loop
 from core.model_discovery import discover_models
 from core.ui_formatter import format_agent_reply
-from memory.memory import Memory
+from memory.memory import DEFAULT_STORAGE_PATH, Memory
 
 
 class ChatMessage(BaseModel):
@@ -29,10 +28,6 @@ class ChatRequest(BaseModel):
     threadId: str = Field(default="default", min_length=1, max_length=200)
 
 
-class LangGraphChatRequest(ChatRequest):
-    threadId: str = Field(min_length=1, max_length=200)
-
-
 class ChatResponse(BaseModel):
     reply: str
     model_reply: str
@@ -41,13 +36,7 @@ class ChatResponse(BaseModel):
     params: dict[str, object]
     action_result: str
     response: str
-
-
-class LangGraphChatResponse(ChatResponse):
-    engine: Literal["langgraph"]
-    thread_id: str
-    graph_nodes: list[str]
-    turn_count: int
+    memory_candidate: dict[str, object] | None = None
 
 
 class ConfigSaveResponse(BaseModel):
@@ -66,10 +55,19 @@ class ModelDiscoveryResponse(BaseModel):
     models: list[str]
 
 
+class MemoryConfirmRequest(BaseModel):
+    index: int = -1
+
+
+class MemoryContextResponse(BaseModel):
+    short_term: list[dict[str, object]]
+    long_term: list[dict[str, object]]
+    pending: list[dict[str, object]]
+
+
 app = FastAPI(title="Youbestar AI Agent")
-memory = Memory()
+memory = Memory(storage_path=DEFAULT_STORAGE_PATH)
 agent_runtime = AgentRuntime()
-langgraph_bridge = LangGraphBridge()
 USE_AGENT_RUNTIME = True
 
 app.add_middleware(
@@ -112,6 +110,12 @@ def run_agent_runtime(llm: LLM, user_message: str, allow_chat: bool, thread_id: 
         allow_chat=allow_chat,
         thread_id=thread_id,
     )
+    memory_candidate = memory.detect_business_memory_candidate(
+        user_message,
+        result.action,
+        result.action_result,
+        module="general",
+    )
     return ChatResponse(
         reply=result.reply,
         model_reply=result.model_reply,
@@ -120,6 +124,7 @@ def run_agent_runtime(llm: LLM, user_message: str, allow_chat: bool, thread_id: 
         params=result.params,
         action_result=result.action_result,
         response=result.response,
+        memory_candidate=memory_candidate if memory_candidate.get("ok") else None,
     )
 
 
@@ -155,6 +160,32 @@ def discover_model_list(request: ModelDiscoveryRequest) -> ModelDiscoveryRespons
     return ModelDiscoveryResponse(**result)
 
 
+@app.get("/memory/context", response_model=MemoryContextResponse)
+def read_memory_context(module: str | None = None) -> MemoryContextResponse:
+    context = memory.get_model_context(module)
+    return MemoryContextResponse(
+        short_term=context["short_term"],
+        long_term=context["long_term"],
+        pending=memory.pending_as_dicts(),
+    )
+
+
+@app.post("/memory/confirm")
+def confirm_memory_candidate(request: MemoryConfirmRequest) -> dict[str, object]:
+    result = memory.confirm_pending(request.index)
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail=result["reason"])
+    return result
+
+
+@app.post("/memory/reject")
+def reject_memory_candidate(request: MemoryConfirmRequest) -> dict[str, object]:
+    result = memory.reject_pending(request.index)
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail=result["reason"])
+    return result
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     user_message = request.message.strip()
@@ -171,37 +202,3 @@ def chat(request: ChatRequest) -> ChatResponse:
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-
-@app.post("/langgraph/chat", response_model=LangGraphChatResponse)
-def langgraph_chat(request: LangGraphChatRequest) -> LangGraphChatResponse:
-    user_message = request.message.strip()
-    if not user_message:
-        raise HTTPException(status_code=400, detail="Message cannot be empty.")
-
-    try:
-        result = langgraph_bridge.invoke(
-            LLM(load_config()),
-            user_message,
-            request.allowChat,
-            request.threadId,
-        )
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail=f"Model API request failed: {exc}") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    reply = build_user_visible_reply(result["response"], result["action"], result["action_result"])
-
-    return LangGraphChatResponse(
-        reply=reply,
-        model_reply=result["model_reply"],
-        thought=result["thought"],
-        action=result["action"],
-        params=result["params"],
-        action_result=result["action_result"],
-        response=result["response"],
-        engine="langgraph",
-        thread_id=result["thread_id"],
-        graph_nodes=result["graph_nodes"],
-        turn_count=result["turn_count"],
-    )

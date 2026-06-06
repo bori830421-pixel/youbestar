@@ -2,9 +2,9 @@
 
 ## Positioning
 
-Youbestar is not a LangGraph application.
+Youbestar is not a graph-framework application.
 
-Youbestar is a local, self-owned agent runtime. LangGraph is useful as a reference implementation and experiment bench, but the production agent core must remain inside Youbestar.
+Youbestar is a local, self-owned agent runtime. Earlier graph-framework experiments have been removed from the production code path; the production agent core must remain inside Youbestar.
 
 The rule is:
 
@@ -12,7 +12,7 @@ The rule is:
 Borrow the ideas. Do not depend on the framework as the core.
 ```
 
-LangGraph concepts we will borrow:
+Graph-runtime concepts we borrowed during design:
 
 - Explicit state
 - Node-based execution
@@ -24,12 +24,12 @@ LangGraph concepts we will borrow:
 Youbestar-owned equivalents:
 
 ```text
-LangGraph StateGraph   -> Youbestar AgentRuntime
-LangGraph State        -> Youbestar AgentState
-LangGraph Node         -> Youbestar AgentNode
-LangGraph Edges        -> Youbestar AgentRouter
-LangGraph Checkpointer -> Youbestar AgentCheckpoint
-LangGraph Interrupt    -> Youbestar AgentPolicy / Approval
+StateGraph   -> Youbestar AgentRuntime
+State        -> Youbestar AgentState
+Node         -> Youbestar AgentNode
+Edges        -> Youbestar AgentRouter
+Checkpointer -> Youbestar AgentCheckpoint
+Interrupt    -> Youbestar AgentPolicy / Approval
 ```
 
 ## Runtime Layers
@@ -323,10 +323,6 @@ Fallback:
 fallback -> agent_loop
 ```
 
-### `/langgraph/chat`
-
-Experiment path only. It remains useful for comparing design ideas, but it should not become the main architecture.
-
 ### `core/loop.py`
 
 Compatibility layer. The new runtime may reuse its prompt builder, parser-adjacent helpers, and response bridge while the project migrates.
@@ -373,7 +369,7 @@ Compatibility layer. The new runtime may reuse its prompt builder, parser-adjace
 
 ## Non-Goals
 
-- Do not replace the whole system with LangGraph.
+- Do not reintroduce experimental graph-framework routing into `/chat`.
 - Do not add multi-agent orchestration before the single-agent runtime is stable.
 - Do not hide state transitions in ad hoc helper functions.
 - Do not make `/chat` depend on experimental graph code.

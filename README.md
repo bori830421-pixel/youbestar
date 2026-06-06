@@ -9,8 +9,7 @@ Youbestar Agent 是一个最小可运行、可扩展的本地 AI Agent 框架。
 - 网页端模型配置保存
 - 第三方 API 模型列表发现
 - 闲聊模式 / 任务优先模式切换
-- LangGraph 旁路实验模式
-- Youbestar 自研 Agent Runtime 骨架
+- Youbestar 自研 Agent Runtime
 - OpenAI-compatible `/v1` 云端模型接口
 - 受控技能系统
 - 技能命名空间与注册表
@@ -44,7 +43,7 @@ http://127.0.0.1:8000/
 
 首次打开网页后，需要填写：
 
-- API 地址，例如 `https://api.openai.com/v1`
+- API 地址，例如 `https://api.deepseek.com/v1`
 - 模型名
 - API Key
 
@@ -59,11 +58,8 @@ youbestar.json
 配置页填写 API 地址和 API Key 后，可以点击“获取模型”。Youbestar 后端会请求对应的 OpenAI-compatible `/models` 接口，例如：
 
 ```text
-https://integrate.api.nvidia.com/v1
-  -> https://integrate.api.nvidia.com/v1/models
-
-https://api.freemodel.dev/v1
-  -> https://api.freemodel.dev/v1/models
+https://api.deepseek.com/v1
+  -> https://api.deepseek.com/v1/models
 ```
 
 拉取成功后，模型名输入框可以搜索和选择返回的模型。第三方接口不支持 `/models` 时，仍然可以手动填写模型名。
@@ -98,32 +94,7 @@ https://api.freemodel.dev/v1
 }
 ```
 
-## LangGraph 实验模式
-
-聊天输入框上方提供“LangGraph 实验”开关：
-
-- 关闭：继续使用原有 `/chat` Agent loop。
-- 开启：请求独立的 `/langgraph/chat`，经过 LangGraph 状态图处理。
-
-当前最小图流程：
-
-```text
-plan -> no_action / execute_skill -> reflect -> finish
-```
-
-LangGraph 模式继续复用现有模型配置、Prompt、Action 解析、技能注册表和技能开关，不会绕过技能审批规则。`reflect` 节点会在执行后复盘工具结果，把失败转成自然说明，把成功工具结果桥接成用户可见回复。界面会显示本轮经过的图节点和同一会话的 `turn_count`，对话历史按 `thread_id` 隔离。
-
-当前使用 `InMemorySaver` 保存线程状态，只用于测试 LangGraph 能力；服务重启后状态会清空。
-
 ## Youbestar Agent Runtime
-
-Youbestar 的正式方向是自研本地智能体运行时，而不是依赖 LangGraph 作为核心。
-
-LangGraph 的定位是：
-
-```text
-参考教材 / 实验对照 / 设计验证
-```
 
 Youbestar Agent Runtime 的定位是：
 
@@ -174,11 +145,11 @@ format_skill_result(result)
 - 多条数据必须使用 Markdown 表格
 - Emoji 只用于标题或少量提示，避免堆叠
 
-天气查询等工具结果会由 Runtime / LangGraph / server 最终回复层转成结构化 Markdown，避免结果只藏在工具卡片里。
+天气查询等工具结果会由 Runtime / server 最终回复层转成结构化 Markdown，避免结果只藏在工具卡片里。
 
 技能只负责业务执行和返回结构化结果，不负责最终 Markdown 渲染。新增技能应优先返回 `ok / kind / title / columns / rows / summary` 这类结构，由 `core/ui_formatter.py` 统一转成用户可见回复，避免每个技能重复写表格、Emoji 和标题格式。
 
-自研 `AgentRuntime` 和 LangGraph 实验桥都会保留技能返回的原始结构化结果，再交给 formatter。不要在执行节点里把技能结果直接 `str(dict)` 后返回给用户。
+自研 `AgentRuntime` 会保留技能返回的原始结构化结果，再交给 formatter。不要在执行节点里把技能结果直接 `str(dict)` 后返回给用户。
 
 ## 统一网络读取层
 
@@ -240,7 +211,6 @@ youbestar/
     agent_runtime.py
     agent_state.py
     http_client.py
-    langgraph_bridge.py
     llm.py
     loop.py
     parser.py

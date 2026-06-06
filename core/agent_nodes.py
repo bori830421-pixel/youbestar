@@ -345,9 +345,7 @@ def answer_check_node(state: AgentState, context: AgentContext) -> AgentState:
 
 def prepare_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("prepare")
-    thread_memory = Memory()
-    thread_memory.history = list(context.memory.history)
-    prompt = build_agent_prompt(thread_memory, state.user_input, state.allow_chat)
+    prompt = build_agent_prompt(context.memory, state.user_input, state.allow_chat)
     state.model_reply = context.llm.chat(prompt)
     parsed = parse_agent_output(state.model_reply)
     state.thought = parsed["thought"]

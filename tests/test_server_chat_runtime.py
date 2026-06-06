@@ -1,8 +1,11 @@
 import unittest
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 import server
 from core.agent_state import AgentResult
+from memory.memory import Memory
 
 
 class FakeLLM:
@@ -10,6 +13,13 @@ class FakeLLM:
 
 
 class ServerChatRuntimeTest(unittest.TestCase):
+    def setUp(self):
+        self.original_memory = server.memory
+        server.memory = Memory()
+
+    def tearDown(self):
+        server.memory = self.original_memory
+
     def test_chat_uses_owned_agent_runtime_by_default(self):
         self.assertTrue(server.USE_AGENT_RUNTIME)
 
@@ -49,6 +59,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertEqual(response.action, "none")
         self.assertEqual(response.action_result, "无操作")
         self.assertEqual(response.response, "你好，我在。")
+        self.assertIsNone(response.memory_candidate)
         run_mock.assert_called_once_with(
             unittest.mock.ANY,
             server.memory,
@@ -78,6 +89,49 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertEqual(response.params, {})
         self.assertEqual(response.action_result, "汕头未来1天天气预报")
         self.assertEqual(response.response, "")
+
+    def test_run_agent_runtime_returns_memory_candidate_for_business_info(self):
+        result = AgentResult(
+            reply="订单已记录。",
+            model_reply="Thought: 识别订单。\nAction: none\nParams: {}\nResponse: 订单已记录。",
+            thought="识别订单。",
+            action="none",
+            params={},
+            action_result="无操作",
+            response="订单已记录。",
+            runtime_nodes=[],
+            thread_id="default",
+            step_count=0,
+        )
+
+        with patch.object(server.agent_runtime, "run", return_value=result):
+            response = server.run_agent_runtime(FakeLLM(), "客户A 下单 SKU-001 共 20 件", True)
+
+        self.assertIsNotNone(response.memory_candidate)
+        self.assertEqual(response.memory_candidate["reason"], "confirmation_required")
+        self.assertEqual(len(server.memory.pending_candidates), 1)
+        self.assertEqual(server.memory.long_term, [])
+
+    def test_memory_confirm_and_reject_endpoints(self):
+        server.memory.propose_long_term("客户A 下单 SKU-001 共 20 件", "order", module="private_sales")
+
+        confirmed = server.confirm_memory_candidate(server.MemoryConfirmRequest())
+
+        self.assertTrue(confirmed["ok"])
+        self.assertEqual(len(server.memory.long_term), 1)
+
+        server.memory.propose_long_term("客户B 下单 SKU-002 共 3 件", "order", module="private_sales")
+        rejected = server.reject_memory_candidate(server.MemoryConfirmRequest())
+
+        self.assertTrue(rejected["ok"])
+        self.assertEqual(len(server.memory.pending_candidates), 0)
+        self.assertEqual(len(server.memory.long_term), 1)
+
+    def test_memory_confirm_returns_404_without_pending_candidate(self):
+        with self.assertRaises(HTTPException) as exc:
+            server.confirm_memory_candidate(server.MemoryConfirmRequest())
+
+        self.assertEqual(exc.exception.status_code, 404)
 
 
 if __name__ == "__main__":

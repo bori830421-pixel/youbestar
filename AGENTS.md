@@ -24,7 +24,7 @@ Surface skipped tests, failed commands, and uncertainty.
 
 ## Agent architecture
 
-Youbestar's production direction is a self-owned local Agent Runtime. LangGraph is only a reference and experiment path, not the core runtime dependency.
+Youbestar's production direction is a self-owned local Agent Runtime. Do not reintroduce graph-framework side routes into the production code path.
 
 New agent behavior should be designed around:
 
