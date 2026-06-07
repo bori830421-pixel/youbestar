@@ -3,7 +3,7 @@ from typing import Any
 
 
 WEATHER_LINE_RE = re.compile(
-    r"^(?P<date>\d{4}-\d{2}-\d{2})：(?P<desc>.+?)，最高 (?P<max>[-\d.]+°C)，最低 (?P<min>[-\d.]+°C)$"
+    r"^(?P<date>\d{4}-\d{2}-\d{2})：最高 (?P<max>[-\d.]+°C)，最低 (?P<min>[-\d.]+°C)，降雨概率 (?P<rain>[-\d.]+%)$"
 )
 
 
@@ -105,9 +105,9 @@ def parse_weather_result(text: str) -> tuple[str, list[list[str]]] | None:
         rows.append(
             [
                 match.group("date"),
-                bold(match.group("desc")),
                 bold(match.group("max")),
                 bold(match.group("min")),
+                bold(match.group("rain")),
             ]
         )
     return title, rows
@@ -121,7 +121,7 @@ def format_weather_result(text: str) -> str:
     title, rows = parsed
     if not rows:
         return format_plain_response(text, "查询结果")
-    table = markdown_table(["日期", "天气", "最高温", "最低温"], rows) if rows else "暂无天气明细。"
+    table = markdown_table(["日期", "最高温", "最低温", "降雨概率"], rows) if rows else "暂无天气明细。"
     day_count = len(rows)
     return (
         f"# 🔍 {title}\n\n"

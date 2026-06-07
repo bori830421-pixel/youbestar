@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from core.agent_nodes import build_synthesis_prompt
+from core.agent_nodes import build_synthesis_prompt, run_action
 from core.agent_state import AgentState
 from core.agent_checkpoint import InMemoryCheckpoint
 from core.agent_runtime import AgentRuntime
@@ -123,7 +123,7 @@ class AgentRuntimeTest(unittest.TestCase):
             [
                 '{"task_type":"tool_use","subject":"300475","sub_questions":["查询300475最新股价"],"constraints":[],"needs_fresh_info":true,"expected_output":"证券行情","query_hints":[]}',
                 "Thought: 用户查询证券行情。\n"
-                "Action: local.query_market_data\n"
+                "Action: official.query_market_data\n"
                 'Params: {"symbol": "300475"}',
                 '{"ok":true,"missing":[],"notes":"已覆盖行情"}',
             ]
@@ -135,6 +135,59 @@ class AgentRuntimeTest(unittest.TestCase):
         self.assertIn("| **香农芯创** | **300475** | 171.9 |", result.reply)
         self.assertNotIn("{'ok': True", result.reply)
         self.assertIn("| 标的名称 | 代码 | 最新价 |", result.response)
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "market_quote",
+            "title": "证券行情查询结果",
+            "columns": ["标的名称", "代码", "最新价"],
+            "rows": [["中国太保", "601601", "31.88"]],
+            "summary": {"标的名称": "中国太保", "代码": "601601", "最新价": "31.88"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_runtime_does_not_block_first_direct_stock_tool_when_clock_expired(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="stock-timeout",
+            user_input="601601最新收盘价",
+            action="official.query_market_data",
+            params={"symbol": "601601"},
+            runtime_started_at=1,
+            max_runtime_seconds=0,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation["kind"], "market_quote")
+        self.assertEqual(result.observation["rows"][0], ["中国太保", "601601", "31.88"])
+        self.assertEqual(result.stop_reason, "")
+        run_mock.assert_called_once_with("official.query_market_data", {"symbol": "601601"})
+        approved_mock.assert_called_once_with("official.query_market_data")
+        enabled_mock.assert_called_once_with("official.query_market_data")
+
+    @patch("core.agent_nodes.run_approved_skill", return_value="汕头未来1天天气预报")
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_runtime_does_not_block_first_direct_weather_tool_when_clock_expired(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="weather-timeout",
+            user_input="汕头天气",
+            action="official.query_weather",
+            params={"city": "汕头", "days": 1},
+            runtime_started_at=1,
+            max_runtime_seconds=0,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation, "汕头未来1天天气预报")
+        self.assertEqual(result.stop_reason, "")
+        run_mock.assert_called_once_with("official.query_weather", {"city": "汕头", "days": 1})
+        approved_mock.assert_called_once_with("official.query_weather")
+        enabled_mock.assert_called_once_with("official.query_weather")
 
     def test_runtime_records_checkpoints_after_each_node(self):
         checkpoint = InMemoryCheckpoint()

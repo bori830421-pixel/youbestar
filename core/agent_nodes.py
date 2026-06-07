@@ -172,6 +172,10 @@ def runtime_limit_reached(state: AgentState) -> str:
     return ""
 
 
+def should_prevent_tool_execution_for_runtime_limit(state: AgentState) -> bool:
+    return state.action == "official.web_query"
+
+
 def _web_rows(observation: Any) -> list[list[Any]]:
     if not isinstance(observation, dict):
         return []
@@ -231,7 +235,7 @@ def search_retry_node(state: AgentState, context: AgentContext) -> AgentState:
     if not assessment.get("retry"):
         return state
 
-    reason = runtime_limit_reached(state)
+    reason = runtime_limit_reached(state) if should_prevent_tool_execution_for_runtime_limit(state) else ""
     if reason:
         state.stop_reason = reason
         state.observation = partial_observation(reason)
@@ -360,7 +364,7 @@ def run_action(state: AgentState) -> AgentState:
         state.observation = "无操作"
         return state
 
-    reason = runtime_limit_reached(state)
+    reason = runtime_limit_reached(state) if should_prevent_tool_execution_for_runtime_limit(state) else ""
     if reason:
         state.stop_reason = reason
         state.observation = partial_observation(reason)

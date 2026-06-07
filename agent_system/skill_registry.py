@@ -25,6 +25,11 @@ BUILTIN_SKILLS = {
         "title": "查询天气",
         "description": "根据城市名快速查询未来 1-7 天天气预报。",
     },
+    "official.query_market_data": {
+        "type": "official",
+        "title": "证券行情查询",
+        "description": "根据股票代码或中文名称查询 A 股实时行情；也可通过 function 参数调用 AKShare 股票、板块、资金流、港美股和指数接口。",
+    },
     "official.write_skill": {
         "type": "official",
         "title": "写入 Sandbox 技能",
@@ -69,6 +74,10 @@ LEGACY_SKILL_ALIASES = {
     "web_search": "official.web_query",
     "query_weather": "official.query_weather",
     "weather": "official.query_weather",
+    "query_market_data": "official.query_market_data",
+    "market_data": "official.query_market_data",
+    "stock_quote": "official.query_market_data",
+    "stock": "official.query_market_data",
     "write_skill": "official.write_skill",
     "write_skill_test": "official.write_skill_test",
     "request_skill_approval": "official.request_skill_approval",

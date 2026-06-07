@@ -178,7 +178,7 @@ fetch_json(url)
 当前已接入：
 
 - `tools/weather_tool.py`
-- `agent_system/skills/local/query_market_data.py`
+- `tools/stock_tool.py`
 
 ## 能力归类规则
 
@@ -274,7 +274,7 @@ official.list_files
 official.read_file
 official.write_project_file
 official.web_query
-local.query_market_data
+official.query_market_data
 ```
 
 `official.write_project_file` 可在项目白名单目录内写入普通文本或代码文件，参数示例：
@@ -297,13 +297,13 @@ official.web_query
 
 用途：根据关键词自动尝试多个搜索源并返回结构化结果。默认国内可访问源优先；当当前网络环境允许时，会补充使用外网搜索引擎和信息源。适用于“帮我搜一下”“哪个地区”“这件事是什么情况”“最新有什么新出来的大模型”等需要直接给出答案的场景，不应退化成只打开百度页面或写死单一搜索源。
 
-本地证券行情技能：
+官方证券行情技能：
 
 ```text
-local.query_market_data
+official.query_market_data
 ```
 
-用途：查询股票、指数行情数据。支持 `symbol`、可选 `date` 和 `fields`。最新行情走腾讯行情接口，历史日 K 走东方财富接口；网络读取统一走 `core.http_client.py`，避免中文名称乱码。技能返回结构化结果，由 `core.ui_formatter.py` 渲染成表格。
+用途：查询 A 股实时行情数据。支持 `symbol` 传入股票代码或中文名称，例如 `600519`、`贵州茅台`、`中国太保`。也支持通过 `function` 调用 AKShare 包装函数，例如 `stock_zh_a_daily`、`stock_individual_info_em`、`stock_board_industry_name_em`、`stock_board_concept_name_em`、`stock_individual_fund_flow`、`stock_hk_spot_em`、`stock_us_spot`、`stock_zh_index_spot_em`。行情数据走 AkShare 或代码兜底行情接口，不通过浏览器爬取页面。技能返回结构化结果，由 `core.ui_formatter.py` 渲染成表格。
 
 ## 受控进化流程
 

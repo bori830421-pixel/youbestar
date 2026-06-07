@@ -21,14 +21,14 @@ class UiFormatterTest(unittest.TestCase):
     def test_weather_multi_day_result_uses_table_and_bold_values(self):
         result = format_weather_result(
             "汕头未来2天天气预报\n"
-            "2026-06-05：雷雨，最高 35.1°C，最低 26.3°C\n"
-            "2026-06-06：阵雨，最高 30.5°C，最低 26.0°C"
+            "2026-06-05：最高 35.1°C，最低 26.3°C，降雨概率 70%\n"
+            "2026-06-06：最高 30.5°C，最低 26.0°C，降雨概率 55%"
         )
 
         self.assertTrue(result.startswith("# 🔍 汕头未来2天天气预报"))
         self.assertIn("## 📊 天气明细", result)
-        self.assertIn("| 日期 | 天气 | 最高温 | 最低温 |", result)
-        self.assertIn("| 2026-06-05 | **雷雨** | **35.1°C** | **26.3°C** |", result)
+        self.assertIn("| 日期 | 最高温 | 最低温 | 降雨概率 |", result)
+        self.assertIn("| 2026-06-05 | **35.1°C** | **26.3°C** | **70%** |", result)
         self.assertIn("## ✅ 关键结论", result)
 
     def test_order_result_uses_required_sections_and_table(self):
