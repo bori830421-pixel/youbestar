@@ -164,15 +164,82 @@
       gap: 7px;
     }
 
-    .model-discovery-row {
+    .profile-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
       align-items: center;
     }
 
+    .profile-row .ghost-button {
+      min-height: 42px;
+    }
+
+    .model-discovery-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+    }
+
     .model-discovery-row .ghost-button {
       min-height: 42px;
+    }
+
+    .model-picker {
+      position: relative;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .model-picker-button {
+      min-height: 42px;
+    }
+
+    .model-options {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 40;
+      max-height: 230px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .model-option,
+    .model-option-empty {
+      width: 100%;
+      min-height: 36px;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    .model-option:hover,
+    .model-option.selected {
+      background: #eef4ff;
+      color: var(--primary);
+    }
+
+    .model-option.selected {
+      font-weight: 800;
+    }
+
+    .model-option-empty {
+      color: var(--muted);
+      cursor: default;
     }
 
     label {
@@ -631,6 +698,16 @@
 
     .reply-card p + p {
       margin-top: 8px;
+    }
+
+    .reply-timer {
+      margin-top: 12px;
+      padding-top: 9px;
+      border-top: 1px solid #d9dde5;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
     }
 
     .markdown-table-wrap {
@@ -1255,6 +1332,14 @@
       </div>
 
       <div class="field">
+        <label for="profile-select">接口配置</label>
+        <div class="profile-row">
+          <select id="profile-select"></select>
+          <button id="save-profile-button" class="ghost-button" type="button">保存当前接口</button>
+        </div>
+        <div class="subtle">切换接口配置会自动填入对应 API 地址、API Key 和模型名。</div>
+      </div>
+      <div class="field">
         <label for="api-url">API 地址</label>
         <input id="api-url" type="url" placeholder="https://api.deepseek.com/v1" required>
       </div>
@@ -1265,10 +1350,13 @@
       <div class="field">
         <label for="model-name">模型名</label>
         <div class="model-discovery-row">
-          <input id="model-name" type="text" list="model-options" placeholder="可获取列表或手动填写" required>
+          <div class="model-picker">
+            <input id="model-name" type="text" placeholder="可获取列表或手动填写" autocomplete="off" required>
+            <button id="model-picker-button" class="ghost-button model-picker-button" type="button" aria-expanded="false" aria-controls="model-options">选择模型</button>
+            <div id="model-options" class="model-options" role="listbox" hidden></div>
+          </div>
           <button id="discover-models-button" class="ghost-button" type="button">获取模型</button>
         </div>
-        <datalist id="model-options"></datalist>
         <div id="model-discovery-status" class="subtle">模型列表尚未加载。</div>
       </div>
       <button id="login-button" class="primary-button" type="submit" disabled>登录</button>
@@ -1503,9 +1591,12 @@
     const configForm = document.getElementById("config-form");
     const configStatus = document.getElementById("config-status");
     const loginButton = document.getElementById("login-button");
+    const profileSelect = document.getElementById("profile-select");
+    const saveProfileButton = document.getElementById("save-profile-button");
     const apiUrlInput = document.getElementById("api-url");
     const modelInput = document.getElementById("model-name");
     const apiKeyInput = document.getElementById("api-key");
+    const modelPickerButton = document.getElementById("model-picker-button");
     const discoverModelsButton = document.getElementById("discover-models-button");
     const modelOptions = document.getElementById("model-options");
     const modelDiscoveryStatus = document.getElementById("model-discovery-status");
@@ -1553,12 +1644,19 @@
     let showThoughtMode = false;
     let showToolMode = false;
     let activeMemoryCandidate = null;
+    let discoveredModels = [];
+    let activeResponseTimer = null;
+    let configProfiles = [];
+    let currentProfileId = "default";
+    let isApplyingProfile = false;
 
     function getConfig() {
       return {
         api_url: apiUrlInput.value.trim(),
         model: modelInput.value.trim(),
         api_key: apiKeyInput.value.trim(),
+        current_profile_id: currentProfileId,
+        profiles: configProfiles,
       };
     }
 
@@ -1576,6 +1674,247 @@
       loginButton.disabled = !configSaved || !isConfigComplete();
     }
 
+    function formatResponseDuration(ms) {
+      const safeMs = Math.max(0, Number(ms) || 0);
+      const totalTenths = Math.round(safeMs / 100);
+      const seconds = Math.floor(totalTenths / 10);
+      const tenths = totalTenths % 10;
+      if (seconds < 60) {
+        return `${seconds}.${tenths} 秒`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes} 分 ${remainingSeconds}.${tenths} 秒`;
+    }
+
+    function responseDurationLabel(message) {
+      if (!message) {
+        return "";
+      }
+      if (message.responseDurationMs !== undefined) {
+        return `模型用时：${formatResponseDuration(message.responseDurationMs)}`;
+      }
+      if (message.pending && message.responseStartedAt) {
+        return `模型思考中：${formatResponseDuration(Date.now() - message.responseStartedAt)}`;
+      }
+      return "";
+    }
+
+    function stopActiveResponseTimer() {
+      if (activeResponseTimer) {
+        clearInterval(activeResponseTimer);
+        activeResponseTimer = null;
+      }
+    }
+
+    function profileLabel(profile) {
+      return profile.name || profile.api_url || profile.id || "默认接口";
+    }
+
+    function profileIdFromApiUrl(apiUrl) {
+      const cleanUrl = String(apiUrl || "").trim();
+      if (!cleanUrl) {
+        return `profile-${Date.now()}`;
+      }
+      return cleanUrl.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `profile-${Date.now()}`;
+    }
+
+    function normalizeConfigProfiles(data) {
+      const profiles = Array.isArray(data.profiles) ? data.profiles : [];
+      const normalized = [];
+      const seen = new Set();
+      profiles.forEach((profile) => {
+        if (!profile || typeof profile !== "object") {
+          return;
+        }
+        const apiUrl = String(profile.api_url || "").trim();
+        const model = String(profile.model || "").trim();
+        const apiKey = String(profile.api_key || "").trim();
+        if (!apiUrl && !model && !apiKey) {
+          return;
+        }
+        const id = String(profile.id || profile.name || profileIdFromApiUrl(apiUrl)).trim();
+        if (!id || seen.has(id)) {
+          return;
+        }
+        normalized.push({
+          id,
+          name: String(profile.name || id).trim(),
+          api_url: apiUrl,
+          model,
+          api_key: apiKey,
+        });
+        seen.add(id);
+      });
+
+      const activeProfileId = String(data.current_profile_id || "").trim();
+      const hasActiveProfile = activeProfileId && normalized.some((profile) => profile.id === activeProfileId);
+      if (!normalized.length || !hasActiveProfile) {
+        const fallbackId = activeProfileId || "default";
+        const fallbackProfile = {
+          id: fallbackId,
+          name: "默认接口",
+          api_url: String(data.api_url || "https://api.openai.com/v1").trim(),
+          model: String(data.model || "gpt-4o-mini").trim(),
+          api_key: String(data.api_key || "").trim(),
+        };
+        const existingIndex = normalized.findIndex((profile) => profile.id === fallbackId);
+        if (existingIndex >= 0) {
+          normalized[existingIndex] = { ...normalized[existingIndex], ...fallbackProfile };
+        } else {
+          normalized.unshift(fallbackProfile);
+        }
+      }
+      return normalized;
+    }
+
+    function renderProfileSelect() {
+      profileSelect.innerHTML = "";
+      configProfiles.forEach((profile) => {
+        const option = document.createElement("option");
+        option.value = profile.id;
+        option.textContent = profileLabel(profile);
+        profileSelect.appendChild(option);
+      });
+
+      const newOption = document.createElement("option");
+      newOption.value = "__new_profile__";
+      newOption.textContent = "新建接口...";
+      profileSelect.appendChild(newOption);
+      profileSelect.value = currentProfileId;
+    }
+
+    function currentProfile() {
+      return configProfiles.find((profile) => profile.id === currentProfileId) || null;
+    }
+
+    function applyProfile(profileId) {
+      const profile = configProfiles.find((item) => item.id === profileId);
+      if (!profile) {
+        return;
+      }
+      isApplyingProfile = true;
+      currentProfileId = profile.id;
+      apiUrlInput.value = profile.api_url || "";
+      modelInput.value = profile.model || "";
+      apiKeyInput.value = profile.api_key || "";
+      discoveredModels = [];
+      hideModelOptions();
+      renderProfileSelect();
+      configSaved = isConfigComplete();
+      setStatus(configSaved ? `已切换到 ${profileLabel(profile)}。` : "请补全配置。", configSaved ? "success" : "");
+      updateLoginState();
+      isApplyingProfile = false;
+      queueSaveConfig();
+    }
+
+    function startNewProfile() {
+      currentProfileId = `profile-${Date.now()}`;
+      profileSelect.value = "__new_profile__";
+      apiUrlInput.value = "";
+      modelInput.value = "";
+      apiKeyInput.value = "";
+      discoveredModels = [];
+      hideModelOptions();
+      configSaved = false;
+      setStatus("正在新建接口配置，请填写 API 地址、API Key 和模型名后保存。");
+      updateLoginState();
+      apiUrlInput.focus();
+    }
+
+    function buildProfileFromInputs(existingProfile = null) {
+      const apiUrl = apiUrlInput.value.trim();
+      const model = modelInput.value.trim();
+      const apiKey = apiKeyInput.value.trim();
+      const id = existingProfile?.id || profileIdFromApiUrl(apiUrl);
+      const name = existingProfile?.name || apiUrl.replace(/^https?:\/\//, "").replace(/\/v1\/?$/, "") || "默认接口";
+      return {
+        id,
+        name,
+        api_url: apiUrl,
+        model,
+        api_key: apiKey,
+      };
+    }
+
+    function upsertCurrentProfile({ createIfMissing = false } = {}) {
+      const existingIndex = configProfiles.findIndex((profile) => profile.id === currentProfileId);
+      if (existingIndex >= 0) {
+        configProfiles[existingIndex] = buildProfileFromInputs(configProfiles[existingIndex]);
+      } else if (createIfMissing) {
+        const profile = buildProfileFromInputs();
+        currentProfileId = profile.id;
+        configProfiles.push(profile);
+      }
+      renderProfileSelect();
+    }
+
+    function normalizeDiscoveredModels(models) {
+      const unique = new Set();
+      (models || []).forEach((modelName) => {
+        const cleanName = String(modelName || "").trim();
+        if (cleanName) {
+          unique.add(cleanName);
+        }
+      });
+      return Array.from(unique).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+    }
+
+    function renderModelOptions({ filterText = "" } = {}) {
+      const keyword = filterText.trim().toLowerCase();
+      const visibleModels = keyword
+        ? discoveredModels.filter((modelName) => modelName.toLowerCase().includes(keyword))
+        : discoveredModels;
+      modelOptions.innerHTML = "";
+
+      if (!discoveredModels.length) {
+        const empty = document.createElement("div");
+        empty.className = "model-option-empty";
+        empty.textContent = "请先点击“获取模型”，或直接手动填写模型名。";
+        modelOptions.appendChild(empty);
+        return;
+      }
+
+      if (!visibleModels.length) {
+        const empty = document.createElement("div");
+        empty.className = "model-option-empty";
+        empty.textContent = "没有匹配的模型，仍可手动填写。";
+        modelOptions.appendChild(empty);
+        return;
+      }
+
+      const currentModel = modelInput.value.trim();
+      visibleModels.forEach((modelName) => {
+        const button = document.createElement("button");
+        button.className = `model-option${modelName === currentModel ? " selected" : ""}`;
+        button.type = "button";
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", String(modelName === currentModel));
+        button.textContent = modelName;
+        button.addEventListener("click", () => selectDiscoveredModel(modelName));
+        modelOptions.appendChild(button);
+      });
+    }
+
+    function showModelOptions({ filterText = "" } = {}) {
+      renderModelOptions({ filterText });
+      modelOptions.hidden = false;
+      modelPickerButton.setAttribute("aria-expanded", "true");
+    }
+
+    function hideModelOptions() {
+      modelOptions.hidden = true;
+      modelPickerButton.setAttribute("aria-expanded", "false");
+    }
+
+    function selectDiscoveredModel(modelName) {
+      modelInput.value = modelName;
+      hideModelOptions();
+      modelDiscoveryStatus.textContent = `已选择模型：${modelName}`;
+      modelDiscoveryStatus.className = "status success";
+      queueSaveConfig();
+    }
+
     async function loadConfig() {
       try {
         const response = await fetch(CONFIG_URL);
@@ -1584,14 +1923,24 @@
           throw new Error(data.detail || "读取配置失败");
         }
 
-        apiUrlInput.value = data.api_url || "https://api.openai.com/v1";
-        modelInput.value = data.model || "gpt-4o-mini";
-        apiKeyInput.value = data.api_key || "";
+        configProfiles = normalizeConfigProfiles(data);
+        currentProfileId = String(data.current_profile_id || configProfiles[0]?.id || "default").trim();
+        if (!configProfiles.some((profile) => profile.id === currentProfileId)) {
+          currentProfileId = configProfiles[0]?.id || "default";
+        }
+        const activeProfile = currentProfile() || configProfiles[0];
+        apiUrlInput.value = activeProfile?.api_url || data.api_url || "https://api.openai.com/v1";
+        modelInput.value = activeProfile?.model || data.model || "gpt-4o-mini";
+        apiKeyInput.value = activeProfile?.api_key || data.api_key || "";
+        renderProfileSelect();
         configSaved = isConfigComplete();
         setStatus(configSaved ? "配置已加载。" : "请补全配置。", configSaved ? "success" : "");
       } catch (error) {
         apiUrlInput.value = "https://api.openai.com/v1";
         modelInput.value = "gpt-4o-mini";
+        configProfiles = [buildProfileFromInputs({ id: "default", name: "默认接口" })];
+        currentProfileId = "default";
+        renderProfileSelect();
         configSaved = false;
         setStatus(`无法连接后端：${error.message}`, "error");
       } finally {
@@ -1606,6 +1955,9 @@
         updateLoginState();
         return false;
       }
+      if (!isApplyingProfile) {
+        upsertCurrentProfile({ createIfMissing: true });
+      }
 
       try {
         const response = await fetch(CONFIG_URL, {
@@ -1618,6 +1970,13 @@
           throw new Error(data.detail || "保存配置失败");
         }
 
+        const savedConfig = data.config || getConfig();
+        configProfiles = normalizeConfigProfiles(savedConfig);
+        currentProfileId = String(savedConfig.current_profile_id || currentProfileId || configProfiles[0]?.id || "default").trim();
+        if (!configProfiles.some((profile) => profile.id === currentProfileId)) {
+          currentProfileId = configProfiles[0]?.id || "default";
+        }
+        renderProfileSelect();
         configSaved = true;
         setStatus("已保存。", "success");
         updateLoginState();
@@ -1663,22 +2022,18 @@
         if (apiUrlChanged) {
           apiUrlInput.value = data.api_url;
         }
-        modelOptions.innerHTML = "";
-        (data.models || []).forEach((modelName) => {
-          const option = document.createElement("option");
-          option.value = modelName;
-          modelOptions.appendChild(option);
-        });
-        if (!modelInput.value.trim() && data.models && data.models.length) {
-          modelInput.value = data.models[0];
+        discoveredModels = normalizeDiscoveredModels(data.models);
+        if (!modelInput.value.trim() && discoveredModels.length) {
+          modelInput.value = discoveredModels[0];
         }
         if (apiUrlChanged || modelInput.value.trim()) {
           queueSaveConfig();
         }
         modelDiscoveryStatus.textContent = apiUrlChanged
-          ? `已获取 ${data.models.length} 个模型，API 地址已规范为 ${normalizedApiUrl}。`
-          : `已获取 ${data.models.length} 个模型，可搜索选择或继续手动填写。`;
+          ? `已获取 ${discoveredModels.length} 个模型，API 地址已规范为 ${normalizedApiUrl}。`
+          : `已获取 ${discoveredModels.length} 个模型，可点击“选择模型”展开完整列表。`;
         modelDiscoveryStatus.className = "status success";
+        showModelOptions();
       } catch (error) {
         modelDiscoveryStatus.textContent = `获取失败：${error.message}；仍可手动填写模型名。`;
         modelDiscoveryStatus.className = "status error";
@@ -1900,6 +2255,8 @@
     function hasAgentTrace(message) {
       return Boolean(
         message.pending ||
+        message.responseStartedAt !== undefined ||
+        message.responseDurationMs !== undefined ||
         message.model_reply !== undefined ||
         message.thought !== undefined ||
         message.action !== undefined ||
@@ -1913,13 +2270,13 @@
       bubble.innerHTML = "";
 
       if (message.pending) {
-        appendReplyCard(bubble, "正在思考...");
+        appendReplyCard(bubble, "正在思考...", message);
       } else {
         const finalReply = message.response || message.reply || message.content || "";
         if (finalReply) {
-          appendReplyCard(bubble, finalReply);
+          appendReplyCard(bubble, finalReply, message);
         } else if (!showThoughtMode && !showToolMode) {
-          appendReplyCard(bubble, message.allowChat === false ? "任务优先模式：无自然回复。" : "模型没有提供用户回复。");
+          appendReplyCard(bubble, message.allowChat === false ? "任务优先模式：无自然回复。" : "模型没有提供用户回复。", message);
         }
       }
 
@@ -1940,10 +2297,17 @@
       }
     }
 
-    function appendReplyCard(parent, text) {
+    function appendReplyCard(parent, text, message = null) {
       const card = document.createElement("div");
       card.className = "reply-card";
       renderMarkdown(card, text);
+      const durationLabel = responseDurationLabel(message);
+      if (durationLabel) {
+        const timer = document.createElement("div");
+        timer.className = "reply-timer";
+        timer.textContent = durationLabel;
+        card.appendChild(timer);
+      }
       parent.appendChild(card);
     }
 
@@ -2262,7 +2626,20 @@
       })) : [];
 
       addMessage("user", message);
-      const loadingMessage = addMessage("assistant", "正在思考...", false, { pending: true, allowChat });
+      const responseStartedAt = Date.now();
+      const loadingMessage = addMessage("assistant", "正在思考...", false, {
+        pending: true,
+        allowChat,
+        responseStartedAt,
+      });
+      stopActiveResponseTimer();
+      activeResponseTimer = setInterval(() => {
+        if (!loadingMessage.pending) {
+          stopActiveResponseTimer();
+          return;
+        }
+        renderMessages();
+      }, 1000);
       input.disabled = true;
       sendButton.disabled = true;
 
@@ -2287,6 +2664,8 @@
         const modelReply = data.model_reply || "";
         const actionResult = data.action_result || "无操作";
         const assistantContent = finalReply || modelReply || actionResult;
+        const responseDurationMs = Date.now() - responseStartedAt;
+        stopActiveResponseTimer();
         Object.assign(loadingMessage, {
           content: assistantContent,
           reply: finalReply,
@@ -2298,20 +2677,27 @@
           response: data.response || "",
           allowChat,
           pending: false,
+          responseStartedAt,
+          responseDurationMs,
           error: false,
         });
         saveStoredConversations();
         renderMessages();
         showMemoryCandidate(data.memory_candidate);
       } catch (error) {
+        const responseDurationMs = Date.now() - responseStartedAt;
+        stopActiveResponseTimer();
         Object.assign(loadingMessage, {
           content: `错误：${error.message}`,
           pending: false,
+          responseStartedAt,
+          responseDurationMs,
           error: true,
         });
         saveStoredConversations();
         renderMessages();
       } finally {
+        stopActiveResponseTimer();
         input.disabled = false;
         sendButton.disabled = false;
         input.focus();
@@ -2564,10 +2950,45 @@
       return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
     }
 
-    [apiUrlInput, modelInput, apiKeyInput].forEach((field) => {
+    [apiUrlInput, apiKeyInput].forEach((field) => {
       field.addEventListener("input", queueSaveConfig);
     });
+    profileSelect.addEventListener("change", () => {
+      if (profileSelect.value === "__new_profile__") {
+        startNewProfile();
+        return;
+      }
+      applyProfile(profileSelect.value);
+    });
+    saveProfileButton.addEventListener("click", async () => {
+      if (!isConfigComplete()) {
+        setStatus("请先补全当前接口的 API 地址、API Key 和模型名。", "error");
+        updateLoginState();
+        return;
+      }
+      upsertCurrentProfile({ createIfMissing: true });
+      await saveConfig();
+    });
+    modelInput.addEventListener("input", () => {
+      queueSaveConfig();
+      showModelOptions({ filterText: modelInput.value });
+    });
+    modelInput.addEventListener("focus", () => {
+      showModelOptions();
+    });
+    modelPickerButton.addEventListener("click", () => {
+      if (modelOptions.hidden) {
+        showModelOptions();
+        return;
+      }
+      hideModelOptions();
+    });
     discoverModelsButton.addEventListener("click", discoverModels);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".model-picker")) {
+        hideModelOptions();
+      }
+    });
 
     configForm.addEventListener("submit", async (event) => {
       event.preventDefault();

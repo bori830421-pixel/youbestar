@@ -6,6 +6,7 @@ from core.config import ModelConfig, normalize_chat_api_url, require_complete_co
 
 
 SYSTEM_PROMPT = "You are a helpful automation agent."
+MODEL_RESPONSE_TIMEOUT_SECONDS = 120
 
 
 class LLM:
@@ -29,7 +30,12 @@ class LLM:
             "temperature": 0.2,
         }
 
-        response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
+        response = requests.post(
+            self.api_url,
+            headers=headers,
+            json=payload,
+            timeout=MODEL_RESPONSE_TIMEOUT_SECONDS,
+        )
         response.raise_for_status()
 
         try:

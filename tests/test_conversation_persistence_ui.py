@@ -22,6 +22,11 @@ class ConversationPersistenceUiTest(unittest.TestCase):
         self.assertIn("!message.pending", self.html)
         self.assertIn("history: conversation.history.filter((message) => !message.pending)", self.html)
 
+    def test_ui_persists_final_response_duration(self):
+        self.assertIn("responseDurationMs", self.html)
+        self.assertIn("responseStartedAt", self.html)
+        self.assertIn("history: conversation.history.filter((message) => !message.pending)", self.html)
+
 
 if __name__ == "__main__":
     unittest.main()

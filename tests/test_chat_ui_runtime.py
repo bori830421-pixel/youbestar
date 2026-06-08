@@ -25,6 +25,17 @@ class ChatUiRuntimeTest(unittest.TestCase):
         self.assertNotIn(removed_title, self.html)
         self.assertNotIn(removed_field, self.html)
 
+    def test_ui_tracks_and_persists_response_duration(self):
+        self.assertIn("let activeResponseTimer = null;", self.html)
+        self.assertIn("function formatResponseDuration(ms)", self.html)
+        self.assertIn("function responseDurationLabel(message)", self.html)
+        self.assertIn("模型思考中：", self.html)
+        self.assertIn("模型用时：", self.html)
+        self.assertIn("responseStartedAt = Date.now()", self.html)
+        self.assertIn("responseDurationMs = Date.now() - responseStartedAt", self.html)
+        self.assertIn("activeResponseTimer = setInterval", self.html)
+        self.assertIn('className = "reply-timer"', self.html)
+
 
 if __name__ == "__main__":
     unittest.main()
