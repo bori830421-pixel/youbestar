@@ -28,6 +28,13 @@ class ServerChatRuntimeTest(unittest.TestCase):
 
         self.assertEqual(request.threadId, "chat-123")
 
+    def test_chat_request_accepts_tool_and_skill_switches(self):
+        request = server.ChatRequest(message="你好", allowChat=True, allowTools=False, allowSkills=True)
+
+        self.assertTrue(request.allowChat)
+        self.assertFalse(request.allowTools)
+        self.assertTrue(request.allowSkills)
+
     def test_run_agent_runtime_returns_chat_response_shape(self):
         result = AgentResult(
             reply="你好，我在。",
@@ -37,23 +44,20 @@ class ServerChatRuntimeTest(unittest.TestCase):
             params={},
             action_result="无操作",
             response="你好，我在。",
-            runtime_nodes=[
-                "understand",
-                "prepare",
-                "rewrite_query",
-                "execute",
-                "search_retry",
-                "reflect",
-                "synthesize",
-                "answer_check",
-                "finalize",
-            ],
+            runtime_nodes=["direct_chat", "finalize"],
             thread_id="default",
-            step_count=9,
+            step_count=2,
         )
 
         with patch.object(server.agent_runtime, "run", return_value=result) as run_mock:
-            response = server.run_agent_runtime(FakeLLM(), "你好", True, thread_id="chat-1")
+            response = server.run_agent_runtime(
+                FakeLLM(),
+                "你好",
+                True,
+                allow_tools=False,
+                allow_skills=True,
+                thread_id="chat-1",
+            )
 
         self.assertEqual(response.reply, "你好，我在。")
         self.assertEqual(response.action, "none")
@@ -65,6 +69,8 @@ class ServerChatRuntimeTest(unittest.TestCase):
             server.memory,
             "你好",
             allow_chat=True,
+            allow_tools=False,
+            allow_skills=True,
             thread_id="chat-1",
         )
 

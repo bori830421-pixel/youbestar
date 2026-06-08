@@ -136,7 +136,10 @@ Verified handling:
 - For requests like "搜索 X 并告诉我结果" or "哪个地区", do not route to `official.open_browser` only. Add or use a query skill that returns structured data, and keep `official.open_browser` for explicit page-opening intent.
 - Web/news queries must not hard-code a single search provider. Prefer an `auto` provider that tries mainland-accessible Chinese sources first and, when the current network environment allows it, also tries external search engines and information sources. Return the source name in structured rows.
 - Search retry is capped: first search uses the original query, second search may use rewritten query candidates, and no third search is allowed.
-- Stock quote requests must use the official `official.query_market_data` skill. It wraps AkShare for fast A-share quotes and supports Chinese stock names such as `贵州茅台` and `中国太保`; do not reintroduce the old `local.query_market_data` path or browser scraping for normal quote lookups.
+- Stock quote requests must use the official `official.query_market_data` skill. It uses the lightweight Eastmoney two-step flow from `tools/stock_tool.py`: search stock by Chinese name/code, then fetch real-time quote by `secid`. Do not reintroduce AkShare wrappers, `function/api` stock side routes, the old `local.query_market_data` path, or browser scraping for normal quote lookups.
+- Weather requests must use the official `official.query_weather` skill and local `tools/weather_tool.py` functions. Do not route weather, stock, or market quote requests to `official.web_query` or browser tools unless the user explicitly asks to search the web for related news/background.
+- Local fast-path parsing must preserve user parameters: weather phrases such as `未来三天` / `未来5天` / `未来7天` must set `days` accordingly, and stock phrases such as `贵州茅台最新股价` or `601601最新收盘价` must strip query modifiers before passing `symbol`.
+- Chat mode is controlled by three independent switches: `allowChat`, `allowTools`, and `allowSkills`. If only `allowChat` is enabled, answer directly with the model and do not run tool/skill planning. `official.*` requires `allowTools`; `local.*` / `community.*` requires `allowSkills`.
 
 ## Sensitive local files
 

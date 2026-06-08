@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_system.manager import run_approved_skill
-from tools.weather_tool import query_weather
+from tools.weather_tool import get_weather, query_weather
 
 
 class FakeWeatherResponse(io.BytesIO):
@@ -29,17 +29,43 @@ class WeatherToolTest(unittest.TestCase):
         with patch("urllib.request.urlopen", self.fake_urlopen):
             result = query_weather({"city": "汕头", "days": 2})
 
-        self.assertIn("汕头未来2天天气预报", result)
-        self.assertIn("2026-06-04：最高 31.5°C，最低 25.0°C，降雨概率 10%", result)
-        self.assertIn("2026-06-05：最高 29.0°C，最低 24.0°C，降雨概率 80%", result)
+        self.assertIs(result["ok"], True)
+        self.assertEqual(result["kind"], "weather_forecast")
+        self.assertEqual(result["title"], "汕头未来2天天气预报")
+        self.assertEqual(result["columns"], ["日期", "最高温", "最低温", "降雨概率", "提醒"])
+        self.assertEqual(
+            result["rows"],
+            [
+                ["2026-06-04", "31.5°C", "25.0°C", "10%", ""],
+                ["2026-06-05", "29.0°C", "24.0°C", "80%", "记得带伞"],
+            ],
+        )
         self.assertIn("precipitation_probability_max", self.request_url)
-        self.assertIn("forecast_days=2", self.request_url)
+        self.assertIn("forecast_days=7", self.request_url)
+
+    def test_get_weather_returns_standardized_dict_with_advice(self):
+        with patch("urllib.request.urlopen", self.fake_urlopen):
+            result = get_weather("汕头")
+
+        self.assertEqual(result["city"], "汕头")
+        self.assertEqual(result["temp"], 31.5)
+        self.assertEqual(result["condition"], "晴")
+        self.assertEqual(result["advice"], [])
+
+    def test_query_weather_fetches_seven_days_then_filters_requested_days(self):
+        with patch("urllib.request.urlopen", self.fake_urlopen):
+            result = query_weather({"city": "汕头", "days": 1})
+
+        self.assertEqual(result["kind"], "weather_forecast")
+        self.assertEqual(len(result["rows"]), 1)
+        self.assertIn("forecast_days=7", self.request_url)
 
     def test_registered_weather_skill_runs(self):
         with patch("urllib.request.urlopen", self.fake_urlopen):
             result = run_approved_skill("official.query_weather", {"city": "深圳", "days": 1})
 
-        self.assertIn("深圳未来2天天气预报", result)
+        self.assertEqual(result["kind"], "weather_forecast")
+        self.assertEqual(result["summary"]["城市"], "深圳")
 
 
 if __name__ == "__main__":

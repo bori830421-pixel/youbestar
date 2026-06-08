@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+import re
 import time
 from typing import Any, Protocol
 
@@ -22,6 +23,68 @@ QUESTION_REQUIREMENT_PATTERNS = (
     ("时间", ("什么时候", "时间", "日期")),
     ("最新进展", ("最新", "进展", "现在怎么样", "后续")),
 )
+CITY_HINTS = ("北京", "上海", "广州", "深圳", "汕头", "杭州", "成都", "武汉", "西安", "南京")
+STOCK_QUERY_HINTS = ("股票", "股价", "行情", "涨跌幅", "收盘价", "最新价", "查一下")
+WEATHER_QUERY_HINTS = ("天气", "气温", "下雨", "雨", "冷不冷", "热不热")
+CHINESE_DAY_NUMBERS = {
+    "一": 1,
+    "二": 2,
+    "两": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+}
+
+
+def _clean_fast_subject(text: str) -> str:
+    return re.sub(r"[，。！？!?、\s]+$", "", text.strip())
+
+
+def _infer_weather_days(text: str) -> int:
+    digit_match = re.search(r"(?:未来|最近|近|后面|接下来)?\s*([1-7])\s*(?:天|日)", text)
+    if digit_match:
+        return int(digit_match.group(1))
+
+    chinese_match = re.search(r"(?:未来|最近|近|后面|接下来)?\s*([一二两三四五六七])\s*(?:天|日)", text)
+    if chinese_match:
+        return CHINESE_DAY_NUMBERS[chinese_match.group(1)]
+
+    return 1
+
+
+def _infer_stock_symbol(text: str) -> str:
+    code_match = re.search(r"\b\d{6}\b", text)
+    if code_match:
+        return code_match.group(0)
+
+    symbol = re.sub(r"^(帮我|麻烦|请|给我)?(查一下|查询|查|看一下|看看)", "", text)
+    symbol = re.sub(
+        r"(今天|今日|现在|当前|实时|最新|的|股票|股价|行情|涨跌幅|收盘价|最新价|价格|多少钱|多少|怎么样|如何)+$",
+        "",
+        symbol,
+    )
+    return _clean_fast_subject(symbol)
+
+
+def _infer_local_tool(user_input: str) -> tuple[str, dict[str, Any]]:
+    text = _clean_fast_subject(user_input)
+    if any(hint in text for hint in WEATHER_QUERY_HINTS):
+        for city in CITY_HINTS:
+            if city in text:
+                return "official.query_weather", {"city": city, "days": _infer_weather_days(text)}
+
+    if any(hint in text for hint in STOCK_QUERY_HINTS):
+        symbol = _infer_stock_symbol(text)
+        if symbol:
+            return "official.query_market_data", {"symbol": symbol}
+
+    code_match = re.search(r"\b\d{6}\b", text)
+    if code_match and any(hint in text for hint in ("股价", "行情", "股票", "收盘价", "最新价")):
+        return "official.query_market_data", {"symbol": code_match.group(0)}
+
+    return "none", {}
 
 
 class AgentLLM(Protocol):
@@ -33,6 +96,30 @@ class AgentLLM(Protocol):
 class AgentContext:
     llm: AgentLLM
     memory: Memory
+
+
+def local_tool_intent_node(state: AgentState, context: AgentContext) -> AgentState:
+    state.visit("local_tool_intent")
+    if not state.allow_tools:
+        return state
+    action, params = _infer_local_tool(state.user_input)
+    if action == "none":
+        return state
+    state.fast_path = True
+    state.intent = {
+        "task_type": "tool_use",
+        "subject": params.get("symbol") or params.get("city") or "",
+        "sub_questions": [state.user_input],
+        "constraints": ["local_tool_fast_path"],
+        "needs_fresh_info": True,
+        "expected_output": "本地工具结果",
+        "query_hints": [],
+    }
+    state.thought = "本地快速意图识别命中。"
+    state.model_reply = "Local fast path"
+    state.action = action
+    state.params = params
+    return state
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -75,8 +162,38 @@ def build_understanding_prompt(state: AgentState) -> str:
 """.strip()
 
 
+def build_direct_chat_prompt(state: AgentState) -> str:
+    history_json = json.dumps(state.history[-6:], ensure_ascii=False, indent=2)
+    return f"""
+你是 Youbestar。当前只允许闲聊/直接回答，不允许工具调用或技能调用。
+
+用户输入:
+{state.user_input}
+
+最近历史:
+{history_json}
+
+请直接回答用户。不要输出 Thought、Action、Params，不要讨论工具调用。
+""".strip()
+
+
+def direct_chat_node(state: AgentState, context: AgentContext) -> AgentState:
+    state.visit("direct_chat")
+    if state.allow_chat and not state.allow_tools and not state.allow_skills:
+        state.direct_chat = True
+        state.action = "none"
+        state.params = {}
+        state.observation = "无操作"
+        state.thought = "仅闲聊模式，直接回答。"
+        state.model_reply = context.llm.chat(build_direct_chat_prompt(state)).strip()
+        state.response = state.model_reply
+    return state
+
+
 def understand_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("understand")
+    if state.direct_chat or state.fast_path:
+        return state
     if not state.allow_chat:
         state.intent = {}
         return state
@@ -136,6 +253,8 @@ def answer_requirements_for_state(state: AgentState) -> list[str]:
 
 def rewrite_query_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("rewrite_query")
+    if state.direct_chat or state.fast_path:
+        return state
     if state.action != "official.web_query":
         return state
 
@@ -297,6 +416,8 @@ def build_synthesis_prompt(state: AgentState) -> str:
 
 def synthesize_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("synthesize")
+    if state.direct_chat or state.fast_path:
+        return state
     if should_synthesize_answer(state):
         state.response = context.llm.chat(build_synthesis_prompt(state)).strip()
         state.reflection = "已根据搜索结果综合回答。"
@@ -329,6 +450,8 @@ def build_answer_check_prompt(state: AgentState) -> str:
 
 def answer_check_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("answer_check")
+    if state.direct_chat or state.fast_path:
+        return state
     if not state.allow_chat or not state.response:
         return state
     if state.action == "none" and not state.plan:
@@ -349,7 +472,15 @@ def answer_check_node(state: AgentState, context: AgentContext) -> AgentState:
 
 def prepare_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("prepare")
-    prompt = build_agent_prompt(context.memory, state.user_input, state.allow_chat)
+    if state.direct_chat or state.fast_path:
+        return state
+    prompt = build_agent_prompt(
+        context.memory,
+        state.user_input,
+        state.allow_chat,
+        allow_tools=state.allow_tools,
+        allow_skills=state.allow_skills,
+    )
     state.model_reply = context.llm.chat(prompt)
     parsed = parse_agent_output(state.model_reply)
     state.thought = parsed["thought"]
@@ -370,7 +501,11 @@ def run_action(state: AgentState) -> AgentState:
         state.observation = partial_observation(reason)
         return state
 
-    if not is_approved_skill(state.action):
+    if state.action.startswith("official.") and not state.allow_tools:
+        state.observation = f"工具调用未开启：{state.action}"
+    elif state.action.startswith(("local.", "community.")) and not state.allow_skills:
+        state.observation = f"技能调用未开启：{state.action}"
+    elif not is_approved_skill(state.action):
         state.observation = f"未知工具：{state.action}"
     elif not is_skill_enabled(state.action):
         state.observation = f"技能已关闭：{state.action}"
@@ -389,6 +524,9 @@ def execute_node(state: AgentState, context: AgentContext) -> AgentState:
 
 def reflect_node(state: AgentState, context: AgentContext) -> AgentState:
     state.visit("reflect")
+    if state.direct_chat:
+        state.reflection = "仅闲聊模式，保留直接回答。"
+        return state
     if not state.allow_chat:
         state.response = ""
         state.reflection = "任务优先模式，不生成自然回复。"

@@ -23,12 +23,12 @@ BUILTIN_SKILLS = {
     "official.query_weather": {
         "type": "official",
         "title": "查询天气",
-        "description": "根据城市名快速查询未来 1-7 天天气预报。",
+        "description": "根据城市名调用本地 get_weather(city) / query_weather(params) 快速返回结构化天气数据和简单提醒。",
     },
     "official.query_market_data": {
         "type": "official",
         "title": "证券行情查询",
-        "description": "根据股票代码或中文名称查询 A 股实时行情；也可通过 function 参数调用 AKShare 股票、板块、资金流、港美股和指数接口。",
+        "description": "根据股票代码或中文名称调用本地 get_stock_price(symbol) 快速返回 A 股实时行情。",
     },
     "official.write_skill": {
         "type": "official",

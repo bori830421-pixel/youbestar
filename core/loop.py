@@ -19,15 +19,21 @@ def normalize_action_name(action: str) -> str:
         return action
 
 
-def build_agent_prompt(memory: Memory, user_input: str, allow_chat: bool = True) -> str:
-    enabled_tools = enabled_builtin_skill_names()
+def build_agent_prompt(
+    memory: Memory,
+    user_input: str,
+    allow_chat: bool = True,
+    allow_tools: bool = True,
+    allow_skills: bool = True,
+) -> str:
+    enabled_tools = enabled_builtin_skill_names() if allow_tools else []
     tool_names = ", ".join(enabled_tools) if enabled_tools else "暂无"
     disabled_tools = [name for name in BUILTIN_SKILLS if name not in enabled_tools]
     disabled_tool_text = ", ".join(disabled_tools) if disabled_tools else "暂无"
     enabled_tool_lines = "\n".join(
         f"- {name}: {BUILTIN_SKILLS[name]['description']}" for name in enabled_tools
     ) or "暂无"
-    registered_skills = enabled_approved_skill_names()
+    registered_skills = enabled_approved_skill_names() if allow_skills else []
     registered_skill_text = ", ".join(registered_skills) if registered_skills else "暂无"
     history = memory.get_summary() or "暂无"
     business_memory = memory.get_business_summary() or "暂无"
@@ -70,6 +76,8 @@ Params: JSON
 
 当前模式:
 allowChat={str(allow_chat)}
+allowTools={str(allow_tools)}
+allowSkills={str(allow_skills)}
 
 {mode_rules}
 
@@ -89,6 +97,8 @@ allowChat={str(allow_chat)}
 - 所有技能都必须使用命名空间，例如 official.open_browser、community.user123.parse_order、local.my_parse_order。
 - official 是官方技能，community 是社区共享技能，local 是用户本地技能。
 - 官方技能也是你已经掌握的技能，不要把“本地技能为空”理解为“没有技能”。
+- allowTools=False 时不要选择 official.* Action。
+- allowSkills=False 时不要选择 local.* 或 community.* Action。
 - 只有注册到 agent_system/skills/registry.json 的技能才是正式可调用技能。
 
 历史信息:
@@ -115,9 +125,9 @@ allowChat={str(allow_chat)}
 
 规则:
 1. 如果用户明确要求打开网页、打开网站、打开百度、在浏览器中打开链接等，使用 official.open_browser。
-2. 如果用户要求联网搜索、查询某个事件是什么、哪个地区、帮我搜并告诉我结果、最新热点、最近发布、新出来的大模型/产品/政策/新闻等，优先使用 official.web_query，Params 至少包含 query，可选 limit。不要指定单一搜索源，除非用户明确要求；网络环境允许时，搜索工具会自动尝试外网搜索引擎和信息源。
-3. 如果用户要求查询股票、证券、指数行情、股价、涨跌幅，或输入类似“中国太保”“贵州茅台”这类股票中文名并询问价格/行情，使用 official.query_market_data，Params 至少包含 symbol，可以是中文名称或股票代码。若用户明确要历史行情、个股信息、行业/概念板块、资金流、港股、美股或指数接口，Params 使用 function 指定 AKShare 包装函数名，并补齐 symbol/stock/market/limit 等参数。
-4. 如果用户要求查询天气、天气预报、气温、下雨情况等，使用 official.query_weather，Params 至少包含 city，可选 days。
+2. 如果用户要求查询股票、证券行情、股价、涨跌幅，或输入类似“中国太保”“贵州茅台”这类股票中文名并询问价格/行情，直接使用 official.query_market_data，Params 至少包含 symbol，可以是中文名称或股票代码。不要为股票查询调用浏览器、网页搜索、模型自拼 API URL 或 function/api 扩展接口。
+3. 如果用户要求查询天气、天气预报、气温、下雨情况等，直接使用 official.query_weather，Params 至少包含 city，可选 days。不要为天气查询调用浏览器、网页搜索或模型自拼 API URL。
+4. 如果用户要求联网搜索、查询某个事件是什么、哪个地区、帮我搜并告诉我结果、最新热点、最近发布、新出来的大模型/产品/政策/新闻等，优先使用 official.web_query，Params 至少包含 query，可选 limit。但股票、天气、股市行情等已有本地函数工具的外部数据查询必须优先走对应工具，禁止退化成网页搜索。不要指定单一搜索源，除非用户明确要求；网络环境允许时，搜索工具会自动尝试外网搜索引擎和信息源。
 5. 如果用户要求创建或改进技能，使用 official.install_local_skill，Params 包含 skill_name、code、description，可选 title、version、overwrite。
 6. 如果用户要求你直接在运行目录、项目目录或指定普通文件中写入/修改内容，使用 official.write_project_file，Params 包含 path、content，可选 overwrite。
 7. 新建或更新的用户技能名必须使用 local.skill_name，例如 local.parse_order。
@@ -146,8 +156,15 @@ def bridge_tool_result_to_response(action: str, result: str, response: str, allo
     return result
 
 
-def agent_loop(llm, memory: Memory, user_input: str, allow_chat: bool = True) -> tuple[str, str, str, dict, str, str]:
-    prompt = build_agent_prompt(memory, user_input, allow_chat)
+def agent_loop(
+    llm,
+    memory: Memory,
+    user_input: str,
+    allow_chat: bool = True,
+    allow_tools: bool = True,
+    allow_skills: bool = True,
+) -> tuple[str, str, str, dict, str, str]:
+    prompt = build_agent_prompt(memory, user_input, allow_chat, allow_tools=allow_tools, allow_skills=allow_skills)
     response = llm.chat(prompt)
     parsed = parse_agent_output(response)
     thought = parsed["thought"]
@@ -157,7 +174,11 @@ def agent_loop(llm, memory: Memory, user_input: str, allow_chat: bool = True) ->
 
     result = "无操作"
     if action != "none":
-        if not is_approved_skill(action):
+        if action.startswith("official.") and not allow_tools:
+            result = f"工具调用未开启：{action}"
+        elif action.startswith(("local.", "community.")) and not allow_skills:
+            result = f"技能调用未开启：{action}"
+        elif not is_approved_skill(action):
             result = f"未知工具：{action}"
         elif not is_skill_enabled(action):
             result = f"技能已关闭：{action}"

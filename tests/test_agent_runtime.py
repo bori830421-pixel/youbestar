@@ -18,11 +18,21 @@ class FakeLLM:
         return self.responses.pop(0)
 
 
+class NoCallLLM:
+    prompts: list[str] = []
+
+    def chat(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        raise AssertionError("local tool fast path should not call the LLM")
+
+
 class AgentRuntimeTest(unittest.TestCase):
     def assertDefaultRuntimeNodes(self, result):
         self.assertEqual(
             result.runtime_nodes,
             [
+                "direct_chat",
+                "local_tool_intent",
                 "understand",
                 "prepare",
                 "rewrite_query",
@@ -54,8 +64,183 @@ class AgentRuntimeTest(unittest.TestCase):
         self.assertIn("你好，我在。", result.response)
         self.assertEqual(result.action, "none")
         self.assertDefaultRuntimeNodes(result)
-        self.assertEqual(result.step_count, 9)
+        self.assertEqual(result.step_count, 11)
         self.assertIn("你好 -> none -> 无操作", memory.get_summary())
+
+    def test_chat_only_mode_answers_directly_without_agent_tool_planning(self):
+        runtime = AgentRuntime()
+        memory = Memory()
+        llm = FakeLLM("这是一段直接回答。")
+
+        result = runtime.run(
+            llm,
+            memory,
+            "解释一下什么是供应链",
+            allow_chat=True,
+            allow_tools=False,
+            allow_skills=False,
+            thread_id="chat-only",
+        )
+
+        self.assertEqual(len(llm.prompts), 1)
+        self.assertNotIn("Action:", llm.prompts[0])
+        self.assertEqual(result.action, "none")
+        self.assertEqual(result.action_result, "无操作")
+        self.assertIn("这是一段直接回答。", result.reply)
+        self.assertEqual(result.runtime_nodes, ["direct_chat", "finalize"])
+
+    @patch("core.agent_nodes.run_approved_skill", return_value="should not run")
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_official_tool_is_blocked_when_tools_are_disabled(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="tool-disabled",
+            user_input="深圳天气",
+            action="official.query_weather",
+            params={"city": "深圳", "days": 1},
+            allow_tools=False,
+            allow_skills=True,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation, "工具调用未开启：official.query_weather")
+        run_mock.assert_not_called()
+
+    @patch("core.agent_nodes.run_approved_skill", return_value="should not run")
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_local_skill_is_blocked_when_skills_are_disabled(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="skill-disabled",
+            user_input="调用本地技能",
+            action="local.parse_order",
+            params={},
+            allow_tools=True,
+            allow_skills=False,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation, "技能调用未开启：local.parse_order")
+        run_mock.assert_not_called()
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "market_quote",
+            "title": "证券行情查询结果",
+            "columns": ["标的名称", "代码", "最新价", "涨跌幅"],
+            "rows": [["贵州茅台", "600519", "1788.5", "2.5%"]],
+            "summary": {"标的名称": "贵州茅台", "代码": "600519", "最新价": "1788.5", "涨跌幅": "2.5%"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_stock_query_uses_local_fast_path_without_llm(self, approved_mock, enabled_mock, run_mock):
+        llm = NoCallLLM()
+
+        result = AgentRuntime().run(llm, Memory(), "查一下贵州茅台", allow_chat=True, thread_id="fast-stock")
+
+        self.assertEqual(llm.prompts, [])
+        self.assertEqual(result.action, "official.query_market_data")
+        self.assertEqual(result.params, {"symbol": "贵州茅台"})
+        self.assertIn("贵州茅台", result.reply)
+        run_mock.assert_called_once_with("official.query_market_data", {"symbol": "贵州茅台"})
+        approved_mock.assert_called_once_with("official.query_market_data")
+        enabled_mock.assert_called_once_with("official.query_market_data")
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "weather_current",
+            "title": "天气查询结果",
+            "columns": ["城市", "天气", "温度", "提醒"],
+            "rows": [["北京", "晴", "32°C", ""]],
+            "summary": {"城市": "北京", "天气": "晴", "温度": "32°C"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_weather_query_uses_local_fast_path_without_llm(self, approved_mock, enabled_mock, run_mock):
+        llm = NoCallLLM()
+
+        result = AgentRuntime().run(llm, Memory(), "北京今天的天气怎么样？", allow_chat=True, thread_id="fast-weather")
+
+        self.assertEqual(llm.prompts, [])
+        self.assertEqual(result.action, "official.query_weather")
+        self.assertEqual(result.params, {"city": "北京", "days": 1})
+        self.assertIn("北京", result.reply)
+        run_mock.assert_called_once_with("official.query_weather", {"city": "北京", "days": 1})
+        approved_mock.assert_called_once_with("official.query_weather")
+        enabled_mock.assert_called_once_with("official.query_weather")
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "weather_forecast",
+            "title": "天气查询结果",
+            "content": "深圳未来3天天气预报",
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_weather_fast_path_extracts_requested_day_count(self, approved_mock, enabled_mock, run_mock):
+        llm = NoCallLLM()
+
+        result = AgentRuntime().run(llm, Memory(), "深圳未来三天天气", allow_chat=True, thread_id="fast-weather-3")
+
+        self.assertEqual(llm.prompts, [])
+        self.assertEqual(result.action, "official.query_weather")
+        self.assertEqual(result.params, {"city": "深圳", "days": 3})
+        run_mock.assert_called_once_with("official.query_weather", {"city": "深圳", "days": 3})
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "market_quote",
+            "title": "证券行情查询结果",
+            "columns": ["标的名称", "代码", "最新价"],
+            "rows": [["贵州茅台", "600519", "1788.5"]],
+            "summary": {"标的名称": "贵州茅台", "代码": "600519", "最新价": "1788.5"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_stock_fast_path_strips_price_modifiers_from_name(self, approved_mock, enabled_mock, run_mock):
+        llm = NoCallLLM()
+
+        result = AgentRuntime().run(llm, Memory(), "贵州茅台最新股价", allow_chat=True, thread_id="fast-stock-name")
+
+        self.assertEqual(llm.prompts, [])
+        self.assertEqual(result.params, {"symbol": "贵州茅台"})
+        run_mock.assert_called_once_with("official.query_market_data", {"symbol": "贵州茅台"})
+
+    @patch(
+        "core.agent_nodes.run_approved_skill",
+        return_value={
+            "ok": True,
+            "kind": "market_quote",
+            "title": "证券行情查询结果",
+            "columns": ["标的名称", "代码", "最新价"],
+            "rows": [["中国太保", "601601", "31.88"]],
+            "summary": {"标的名称": "中国太保", "代码": "601601", "最新价": "31.88"},
+        },
+    )
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_stock_fast_path_extracts_code_before_modifiers(self, approved_mock, enabled_mock, run_mock):
+        llm = NoCallLLM()
+
+        result = AgentRuntime().run(llm, Memory(), "601601最新收盘价", allow_chat=True, thread_id="fast-stock-code")
+
+        self.assertEqual(llm.prompts, [])
+        self.assertEqual(result.params, {"symbol": "601601"})
+        run_mock.assert_called_once_with("official.query_market_data", {"symbol": "601601"})
 
     @patch("core.agent_nodes.run_approved_skill", return_value="汕头未来1天天气预报")
     @patch("core.agent_nodes.is_skill_enabled", return_value=True)

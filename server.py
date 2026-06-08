@@ -25,6 +25,8 @@ class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = Field(default_factory=list)
     allowChat: bool = True
+    allowTools: bool = True
+    allowSkills: bool = True
     threadId: str = Field(default="default", min_length=1, max_length=200)
 
 
@@ -84,12 +86,20 @@ def build_user_visible_reply(response: str, action: str, action_result: str) -> 
     return format_agent_reply(action, response, action_result)
 
 
-def run_legacy_agent_loop(llm: LLM, user_message: str, allow_chat: bool) -> ChatResponse:
+def run_legacy_agent_loop(
+    llm: LLM,
+    user_message: str,
+    allow_chat: bool,
+    allow_tools: bool = True,
+    allow_skills: bool = True,
+) -> ChatResponse:
     model_reply, thought, action, params, action_result, user_response = agent_loop(
         llm,
         memory,
         user_message,
         allow_chat,
+        allow_tools=allow_tools,
+        allow_skills=allow_skills,
     )
     return ChatResponse(
         reply=build_user_visible_reply(user_response, action, action_result),
@@ -102,12 +112,21 @@ def run_legacy_agent_loop(llm: LLM, user_message: str, allow_chat: bool) -> Chat
     )
 
 
-def run_agent_runtime(llm: LLM, user_message: str, allow_chat: bool, thread_id: str = "default") -> ChatResponse:
+def run_agent_runtime(
+    llm: LLM,
+    user_message: str,
+    allow_chat: bool,
+    allow_tools: bool = True,
+    allow_skills: bool = True,
+    thread_id: str = "default",
+) -> ChatResponse:
     result = agent_runtime.run(
         llm,
         memory,
         user_message,
         allow_chat=allow_chat,
+        allow_tools=allow_tools,
+        allow_skills=allow_skills,
         thread_id=thread_id,
     )
     memory_candidate = memory.detect_business_memory_candidate(
@@ -195,8 +214,21 @@ def chat(request: ChatRequest) -> ChatResponse:
     try:
         llm = LLM(load_config())
         if USE_AGENT_RUNTIME:
-            return run_agent_runtime(llm, user_message, request.allowChat, request.threadId)
-        return run_legacy_agent_loop(llm, user_message, request.allowChat)
+            return run_agent_runtime(
+                llm,
+                user_message,
+                request.allowChat,
+                allow_tools=request.allowTools,
+                allow_skills=request.allowSkills,
+                thread_id=request.threadId,
+            )
+        return run_legacy_agent_loop(
+            llm,
+            user_message,
+            request.allowChat,
+            allow_tools=request.allowTools,
+            allow_skills=request.allowSkills,
+        )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail=f"Model API request failed: {exc}") from exc
     except ValueError as exc:

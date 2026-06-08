@@ -1487,6 +1487,14 @@
                 <input id="allow-chat-toggle" type="checkbox" checked>
                 <span id="allow-chat-label">允许闲聊</span>
               </label>
+              <label class="chat-toggle" title="允许调用 official.* 工具，例如天气、股票、网页查询、浏览器和文件工具">
+                <input id="allow-tool-toggle" type="checkbox" checked>
+                <span id="allow-tool-label">允许工具</span>
+              </label>
+              <label class="chat-toggle" title="允许调用 local.* / community.* 注册技能">
+                <input id="allow-skill-toggle" type="checkbox" checked>
+                <span id="allow-skill-label">允许技能</span>
+              </label>
               <span id="mode-hint" class="mode-label">显示思考/工具调用</span>
               <span class="composer-spacer"></span>
               <span id="enabled-skill-count">技能 0 / 0</span>
@@ -1622,6 +1630,10 @@
     const toggleToolButton = document.getElementById("toggle-tool-button");
     const allowChatToggle = document.getElementById("allow-chat-toggle");
     const allowChatLabel = document.getElementById("allow-chat-label");
+    const allowToolToggle = document.getElementById("allow-tool-toggle");
+    const allowToolLabel = document.getElementById("allow-tool-label");
+    const allowSkillToggle = document.getElementById("allow-skill-toggle");
+    const allowSkillLabel = document.getElementById("allow-skill-label");
     const modeHint = document.getElementById("mode-hint");
     const backConfigButton = document.getElementById("back-config-button");
     const logoutButton = document.getElementById("logout-button");
@@ -1635,6 +1647,7 @@
 
     const CONVERSATION_STORAGE_KEY = "youbestar.conversations.v1";
     const ACTIVE_CONVERSATION_STORAGE_KEY = "youbestar.activeConversationId.v1";
+    const AGENT_MODE_STORAGE_KEY = "youbestar.agentMode.v1";
     const conversations = [];
     let activeConversationId = null;
     let saveTimer = null;
@@ -2523,9 +2536,43 @@
       }
     }
 
-    function updateAllowChatLabel() {
+    function getAgentMode() {
+      return {
+        allowChat: allowChatToggle.checked,
+        allowTools: allowToolToggle.checked,
+        allowSkills: allowSkillToggle.checked,
+      };
+    }
+
+    function saveAgentMode() {
+      try {
+        localStorage.setItem(AGENT_MODE_STORAGE_KEY, JSON.stringify(getAgentMode()));
+      } catch {
+        // Keep chat usable even when localStorage is unavailable.
+      }
+    }
+
+    function loadAgentMode() {
+      try {
+        const rawMode = localStorage.getItem(AGENT_MODE_STORAGE_KEY);
+        if (!rawMode) return;
+        const mode = JSON.parse(rawMode);
+        allowChatToggle.checked = mode.allowChat !== false;
+        allowToolToggle.checked = mode.allowTools !== false;
+        allowSkillToggle.checked = mode.allowSkills !== false;
+      } catch {
+        // Invalid stored mode should not block chat.
+      }
+    }
+
+    function updateAgentModeLabels() {
       allowChatLabel.textContent = allowChatToggle.checked ? "允许闲聊" : "任务优先";
       allowChatToggle.title = allowChatToggle.checked ? "Chat On：允许自然回复" : "Chat Off：只做任务判断";
+      allowToolLabel.textContent = allowToolToggle.checked ? "允许工具" : "禁用工具";
+      allowToolToggle.title = allowToolToggle.checked ? "允许 official.* 工具调用" : "禁用 official.* 工具调用";
+      allowSkillLabel.textContent = allowSkillToggle.checked ? "允许技能" : "禁用技能";
+      allowSkillToggle.title = allowSkillToggle.checked ? "允许 local.* / community.* 技能调用" : "禁用 local.* / community.* 技能调用";
+      saveAgentMode();
     }
 
     function addMessage(role, content, error = false, extra = {}) {
@@ -2618,7 +2665,7 @@
     }
 
     async function sendMessage(message) {
-      const allowChat = allowChatToggle.checked;
+      const { allowChat, allowTools, allowSkills } = getAgentMode();
       const conversation = activeConversation();
       const previousHistory = conversation ? conversation.history.slice(-20).map((item) => ({
         role: item.role,
@@ -2630,6 +2677,8 @@
       const loadingMessage = addMessage("assistant", "正在思考...", false, {
         pending: true,
         allowChat,
+        allowTools,
+        allowSkills,
         responseStartedAt,
       });
       stopActiveResponseTimer();
@@ -2650,6 +2699,8 @@
           body: JSON.stringify({
             message,
             allowChat,
+            allowTools,
+            allowSkills,
             history: previousHistory,
             threadId: String(conversation ? conversation.id : "default"),
           }),
@@ -2676,6 +2727,8 @@
           action_result: actionResult,
           response: data.response || "",
           allowChat,
+          allowTools,
+          allowSkills,
           pending: false,
           responseStartedAt,
           responseDurationMs,
@@ -3031,14 +3084,15 @@
       updateModeButtons();
       renderMessages();
     });
-    allowChatToggle.addEventListener("change", () => {
-      updateAllowChatLabel();
-    });
+    allowChatToggle.addEventListener("change", updateAgentModeLabels);
+    allowToolToggle.addEventListener("change", updateAgentModeLabels);
+    allowSkillToggle.addEventListener("change", updateAgentModeLabels);
     memoryConfirmButton.addEventListener("click", () => submitMemoryDecision(MEMORY_CONFIRM_URL, "保存"));
     memoryRejectButton.addEventListener("click", () => submitMemoryDecision(MEMORY_REJECT_URL, "忽略"));
 
     updateModeButtons();
-    updateAllowChatLabel();
+    loadAgentMode();
+    updateAgentModeLabels();
     loadConfig();
   </script>
 </body>

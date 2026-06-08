@@ -68,21 +68,24 @@ https://api.deepseek.com/v1
 
 ## 对话模式
 
-聊天窗口提供一个“允许闲聊”开关：
+聊天窗口提供三个独立开关，选择会保存到浏览器 `localStorage`，下次打开自动沿用：
 
-- 开启：Chat On，模型可以输出自然语言回复，也可以调用技能。
-- 关闭：Chat Off，任务优先，模型只能输出 `Thought / Action / Params`，不能输出自然闲聊。
+- `允许闲聊`：允许模型直接自然回答。只开启这一项时，后端不做工具判断，直接把问题交给模型回答。
+- `允许工具`：允许调用 `official.*` 官方工具，例如天气、股票、网页查询、浏览器和文件工具。
+- `允许技能`：允许调用 `local.*` / `community.*` 已注册技能。
 
 前端请求 `/chat` 时会传：
 
 ```json
 {
   "message": "你好",
-  "allowChat": true
+  "allowChat": true,
+  "allowTools": true,
+  "allowSkills": true
 }
 ```
 
-后端会根据 `allowChat` 改写 prompt，并返回结构化字段：
+后端会根据三个开关决定是否直答、是否允许工具、是否允许技能，并返回结构化字段：
 
 ```json
 {
@@ -303,7 +306,15 @@ official.web_query
 official.query_market_data
 ```
 
-用途：查询 A 股实时行情数据。支持 `symbol` 传入股票代码或中文名称，例如 `600519`、`贵州茅台`、`中国太保`。也支持通过 `function` 调用 AKShare 包装函数，例如 `stock_zh_a_daily`、`stock_individual_info_em`、`stock_board_industry_name_em`、`stock_board_concept_name_em`、`stock_individual_fund_flow`、`stock_hk_spot_em`、`stock_us_spot`、`stock_zh_index_spot_em`。行情数据走 AkShare 或代码兜底行情接口，不通过浏览器爬取页面。技能返回结构化结果，由 `core.ui_formatter.py` 渲染成表格。
+用途：查询 A 股实时行情数据。支持 `symbol` 传入股票代码或中文名称，例如 `600519`、`贵州茅台`、`中国太保`。行情数据走东方财富轻量接口：先搜索股票，再按 `secid` 获取实时行情；不通过浏览器爬取页面，也不支持 `function/api` 扩展包装。技能返回结构化结果，由 `core.ui_formatter.py` 渲染成表格。
+
+官方天气技能：
+
+```text
+official.query_weather
+```
+
+用途：根据城市名调用本地 `get_weather(city)` / `query_weather(params)` 返回结构化天气数据。股票、天气、股市行情这类已有本地函数工具的外部数据查询不走网页搜索；模型只负责识别意图、传参和最终文字润色。
 
 ## 受控进化流程
 

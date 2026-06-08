@@ -9,6 +9,8 @@ class AgentState:
     thread_id: str
     user_input: str
     allow_chat: bool = True
+    allow_tools: bool = True
+    allow_skills: bool = True
     model_reply: str = ""
     thought: str = ""
     intent: dict[str, Any] = field(default_factory=dict)
@@ -28,6 +30,8 @@ class AgentState:
     answer_check: dict[str, Any] = field(default_factory=dict)
     response: str = ""
     reply: str = ""
+    direct_chat: bool = False
+    fast_path: bool = False
     errors: list[str] = field(default_factory=list)
     runtime_nodes: list[str] = field(default_factory=list)
     step_count: int = 0
