@@ -93,6 +93,34 @@ class MemoryManagementTest(unittest.TestCase):
         self.assertEqual(len(memory.pending_candidates), 1)
         self.assertEqual(memory.get_model_context("private_sales")["long_term"], [])
 
+    def test_factory_quote_lookup_does_not_create_memory_candidate(self):
+        memory = Memory()
+
+        result = memory.detect_business_memory_candidate(
+            "潘多多 PD1102产品尺寸、装箱数、毛重是多少？100个按10%利润帮我算报价",
+            action="local.factory_quote",
+            result="货号：PD1102 数量：100 成本：15.225 报价总额：1674.75",
+            module="general",
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["reason"], "query_result_not_memory")
+        self.assertEqual(memory.pending_candidates, [])
+
+    def test_quote_style_question_without_tool_action_does_not_create_memory_candidate(self):
+        memory = Memory()
+
+        result = memory.detect_business_memory_candidate(
+            "PD1102 尺寸和100个报价是多少",
+            action="none",
+            result="",
+            module="general",
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["reason"], "query_result_not_memory")
+        self.assertEqual(memory.pending_candidates, [])
+
     def test_confirmed_memory_persists_to_json_file(self):
         with TemporaryDirectory() as temp_dir:
             storage_path = Path(temp_dir) / "memory.json"

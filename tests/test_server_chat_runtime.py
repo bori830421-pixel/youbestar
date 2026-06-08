@@ -29,11 +29,18 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertEqual(request.threadId, "chat-123")
 
     def test_chat_request_accepts_tool_and_skill_switches(self):
-        request = server.ChatRequest(message="你好", allowChat=True, allowTools=False, allowSkills=True)
+        request = server.ChatRequest(
+            message="你好",
+            allowChat=True,
+            allowTools=False,
+            allowSkills=True,
+            allowSelfEvolution=True,
+        )
 
         self.assertTrue(request.allowChat)
         self.assertFalse(request.allowTools)
         self.assertTrue(request.allowSkills)
+        self.assertTrue(request.allowSelfEvolution)
 
     def test_run_agent_runtime_returns_chat_response_shape(self):
         result = AgentResult(
@@ -56,6 +63,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
                 True,
                 allow_tools=False,
                 allow_skills=True,
+                allow_self_evolution=True,
                 thread_id="chat-1",
             )
 
@@ -71,8 +79,39 @@ class ServerChatRuntimeTest(unittest.TestCase):
             allow_chat=True,
             allow_tools=False,
             allow_skills=True,
+            allow_self_evolution=True,
             thread_id="chat-1",
         )
+
+    @patch("server.LLM")
+    @patch("server.load_config")
+    @patch("server.is_self_evolution_enabled", return_value=False)
+    def test_chat_requires_backend_self_evolution_setting(self, setting_mock, config_mock, llm_mock):
+        result = AgentResult(
+            reply="blocked",
+            model_reply="",
+            thought="",
+            action="official.read_file",
+            params={},
+            action_result="自我进化未开启：official.read_file",
+            response="blocked",
+            runtime_nodes=[],
+            thread_id="default",
+            step_count=0,
+        )
+
+        with patch.object(server.agent_runtime, "run", return_value=result) as run_mock:
+            server.chat(
+                server.ChatRequest(
+                    message="读取代码",
+                    allowTools=True,
+                    allowSkills=True,
+                    allowSelfEvolution=True,
+                )
+            )
+
+        run_mock.assert_called_once()
+        self.assertFalse(run_mock.call_args.kwargs["allow_self_evolution"])
 
     @patch("server.agent_loop")
     def test_legacy_agent_loop_fallback_still_returns_chat_response_shape(self, loop_mock):
@@ -117,6 +156,30 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertEqual(response.memory_candidate["reason"], "confirmation_required")
         self.assertEqual(len(server.memory.pending_candidates), 1)
         self.assertEqual(server.memory.long_term, [])
+
+    def test_factory_quote_runtime_result_does_not_return_memory_candidate(self):
+        result = AgentResult(
+            reply="工厂报价查询结果。",
+            model_reply="Thought: 查询报价。\nAction: local.factory_quote\nParams: {}",
+            thought="查询报价。",
+            action="local.factory_quote",
+            params={"factory_name": "潘多多", "sku": "PD1102", "quantity": 100},
+            action_result="货号：PD1102 数量：100 成本：15.225 报价总额：1674.75",
+            response="工厂报价查询结果。",
+            runtime_nodes=[],
+            thread_id="default",
+            step_count=0,
+        )
+
+        with patch.object(server.agent_runtime, "run", return_value=result):
+            response = server.run_agent_runtime(
+                FakeLLM(),
+                "潘多多 PD1102产品尺寸、装箱数、毛重是多少？100个按10%利润帮我算报价",
+                True,
+            )
+
+        self.assertIsNone(response.memory_candidate)
+        self.assertEqual(server.memory.pending_candidates, [])
 
     def test_memory_confirm_and_reject_endpoints(self):
         server.memory.propose_long_term("客户A 下单 SKU-001 共 20 件", "order", module="private_sales")

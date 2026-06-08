@@ -7,7 +7,7 @@ from typing import Any, Protocol
 from agent_system.manager import is_approved_skill, run_approved_skill
 from agent_system.skill_registry import is_skill_enabled
 from core.agent_state import AgentState
-from core.loop import build_agent_prompt, bridge_tool_result_to_response, normalize_action_name
+from core.loop import SELF_EVOLUTION_ACTIONS, build_agent_prompt, bridge_tool_result_to_response, normalize_action_name
 from core.parser import parse_agent_output
 from core.ui_formatter import format_agent_reply, format_error, format_plain_response, observation_to_text
 from memory.memory import Memory
@@ -480,6 +480,7 @@ def prepare_node(state: AgentState, context: AgentContext) -> AgentState:
         state.allow_chat,
         allow_tools=state.allow_tools,
         allow_skills=state.allow_skills,
+        allow_self_evolution=state.allow_self_evolution,
     )
     state.model_reply = context.llm.chat(prompt)
     parsed = parse_agent_output(state.model_reply)
@@ -503,6 +504,8 @@ def run_action(state: AgentState) -> AgentState:
 
     if state.action.startswith("official.") and not state.allow_tools:
         state.observation = f"工具调用未开启：{state.action}"
+    elif state.action in SELF_EVOLUTION_ACTIONS and not state.allow_self_evolution:
+        state.observation = f"自我进化未开启：{state.action}"
     elif state.action.startswith(("local.", "community.")) and not state.allow_skills:
         state.observation = f"技能调用未开启：{state.action}"
     elif not is_approved_skill(state.action):

@@ -50,6 +50,24 @@ class AgentLoopTest(unittest.TestCase):
         self.assertIn("股票、天气、股市行情等已有本地函数工具", prompt)
         self.assertIn("如果用户最终目的明显是获取答案", prompt)
 
+    def test_prompt_routes_factory_quote_requests_to_local_skill(self):
+        prompt = build_agent_prompt(Memory(), "潘多多 QQL701A 产品尺寸和100个报价", allow_chat=True)
+
+        self.assertIn("local.factory_quote", prompt)
+        self.assertIn("工厂报价、货号资料、产品尺寸", prompt)
+        self.assertIn("factory_name、sku、quantity", prompt)
+        self.assertIn("operation 使用 bind_image", prompt)
+        self.assertIn('默认图片绑定为 image_type="sku_image"', prompt)
+        self.assertIn('实拍图/实拍照片', prompt)
+        self.assertIn('image_type="real_photo"', prompt)
+        self.assertIn("单品毛重/单品净重", prompt)
+        self.assertIn("operation 使用 update_weight", prompt)
+        self.assertIn("operation 使用 update_specs", prompt)
+        self.assertIn("product_size_cm、package_size_cm", prompt)
+        self.assertIn("业务员、业务联系人、业务电话、联系电话", prompt)
+        self.assertIn("operation 使用 contact", prompt)
+        self.assertIn("价格默认人民币元且展示两位小数", prompt)
+
     def test_prompt_routes_latest_model_news_to_web_query(self):
         prompt = build_agent_prompt(Memory(), "最新有什么新出来的大模型", allow_chat=True)
 
@@ -67,9 +85,22 @@ class AgentLoopTest(unittest.TestCase):
     def test_prompt_routes_project_file_writes_to_write_project_file(self):
         prompt = build_agent_prompt(Memory(), "直接在运行目录里面写一个 notes.md", allow_chat=True)
 
+        self.assertIn("allowSelfEvolution=False", prompt)
+        self.assertIn("allowSelfEvolution=False 时，禁止选择", prompt)
         self.assertIn("official.write_project_file", prompt)
         self.assertIn("运行目录内的普通项目文件", prompt)
         self.assertIn("Params 包含 path、content", prompt)
+
+    def test_prompt_allows_project_file_writes_when_self_evolution_is_enabled(self):
+        prompt = build_agent_prompt(
+            Memory(),
+            "直接在运行目录里面写一个 notes.md",
+            allow_chat=True,
+            allow_self_evolution=True,
+        )
+
+        self.assertIn("allowSelfEvolution=True", prompt)
+        self.assertIn("allowSelfEvolution=True 时，你可以读取白名单目录内的普通项目代码文件", prompt)
 
     def test_agent_loop_returns_response_only_when_chat_is_allowed(self):
         class FakeLLM:
@@ -100,6 +131,45 @@ class AgentLoopTest(unittest.TestCase):
         run_mock.assert_called_once_with("official.query_weather", {"city": "汕头"})
         approved_mock.assert_called_once_with("official.query_weather")
         enabled_mock.assert_called_once_with("official.query_weather")
+
+    @patch("core.loop.run_approved_skill", return_value="已写入项目文件")
+    @patch("core.loop.is_skill_enabled", return_value=True)
+    @patch("core.loop.is_approved_skill", return_value=True)
+    def test_agent_loop_blocks_self_evolution_actions_when_disabled(self, approved_mock, enabled_mock, run_mock):
+        class FakeLLM:
+            def chat(self, prompt):
+                return 'Thought: 修改项目。\nAction: official.write_project_file\nParams: {"path": "notes.md", "content": "hi"}'
+
+        _, _, action, _, result, response = agent_loop(FakeLLM(), Memory(), "写 notes")
+
+        self.assertEqual(action, "official.write_project_file")
+        self.assertEqual(result, "自我进化未开启：official.write_project_file")
+        self.assertEqual(response, result)
+        run_mock.assert_not_called()
+        approved_mock.assert_not_called()
+        enabled_mock.assert_not_called()
+
+    @patch("core.loop.run_approved_skill", return_value="已写入项目文件")
+    @patch("core.loop.is_skill_enabled", return_value=True)
+    @patch("core.loop.is_approved_skill", return_value=True)
+    def test_agent_loop_allows_self_evolution_actions_when_enabled(self, approved_mock, enabled_mock, run_mock):
+        class FakeLLM:
+            def chat(self, prompt):
+                return 'Thought: 修改项目。\nAction: official.write_project_file\nParams: {"path": "notes.md", "content": "hi"}'
+
+        _, _, action, _, result, response = agent_loop(
+            FakeLLM(),
+            Memory(),
+            "写 notes",
+            allow_self_evolution=True,
+        )
+
+        self.assertEqual(action, "official.write_project_file")
+        self.assertEqual(result, "已写入项目文件")
+        self.assertEqual(response, result)
+        run_mock.assert_called_once()
+        approved_mock.assert_called_once_with("official.write_project_file")
+        enabled_mock.assert_called_once_with("official.write_project_file")
 
 
 if __name__ == "__main__":

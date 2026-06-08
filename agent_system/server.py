@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 from fastapi import APIRouter
 
+from agent_system.evolution_policy import (
+    is_self_evolution_enabled,
+    require_self_evolution_enabled,
+    set_self_evolution_enabled,
+)
 from agent_system.manager import (
     approve_skill,
     list_approved_skills,
@@ -81,7 +86,12 @@ class SkillToggleRequest(BaseModel):
     enabled: bool
 
 
+class SelfEvolutionSettingsRequest(BaseModel):
+    enabled: bool
+
+
 router = APIRouter(prefix="/skills", tags=["skills"])
+self_evolution_router = APIRouter(prefix="/self-evolution", tags=["self-evolution"])
 
 
 @router.get("/prompt")
@@ -96,11 +106,13 @@ def file_read_policy() -> dict:
 
 @router.post("/files/list")
 def list_files(request: FileListRequest) -> dict:
+    require_self_evolution_enabled()
     return list_allowed_files(request.path, request.recursive)
 
 
 @router.post("/files/read")
 def read_file(request: FileReadRequest) -> dict:
+    require_self_evolution_enabled()
     return read_allowed_file(request.path)
 
 
@@ -126,29 +138,45 @@ def approvals() -> dict[str, list[dict]]:
 
 @router.post("/sandbox/write")
 def write_sandbox_file(request: SandboxWriteRequest) -> dict:
+    require_self_evolution_enabled()
     return write_to_sandbox(request.filename, request.code)
 
 
 @router.post("/tests/write")
 def write_skill_test(request: TestWriteRequest) -> dict:
+    require_self_evolution_enabled()
     return write_test_file(request.skill_name, request.code)
 
 
 @router.post("/tests/run")
 def run_skill_tests(request: TestRunRequest) -> dict:
+    require_self_evolution_enabled()
     return run_sandbox_tests(request.file, request.test_file)
 
 
 @router.post("/approval/request")
 def create_approval_request(request: ApprovalRequest) -> dict:
+    require_self_evolution_enabled()
     return request_approval(request.skill_name, request.file, request.description, request.test_file)
 
 
 @router.post("/approve")
 def approve(request: ReviewRequest) -> dict:
+    require_self_evolution_enabled()
     return approve_skill(request.skill_name, request.file, request.reviewer, request.note)
 
 
 @router.post("/reject")
 def reject(request: ReviewRequest) -> dict:
+    require_self_evolution_enabled()
     return reject_skill(request.skill_name, request.file, request.reviewer, request.note)
+
+
+@self_evolution_router.get("/settings")
+def read_self_evolution_settings() -> dict[str, bool]:
+    return {"enabled": is_self_evolution_enabled()}
+
+
+@self_evolution_router.post("/settings")
+def save_self_evolution_settings(request: SelfEvolutionSettingsRequest) -> dict[str, bool]:
+    return set_self_evolution_enabled(request.enabled)

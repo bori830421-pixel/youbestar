@@ -11,6 +11,7 @@ class AgentState:
     allow_chat: bool = True
     allow_tools: bool = True
     allow_skills: bool = True
+    allow_self_evolution: bool = False
     model_reply: str = ""
     thought: str = ""
     intent: dict[str, Any] = field(default_factory=dict)

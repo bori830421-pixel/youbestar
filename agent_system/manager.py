@@ -316,6 +316,7 @@ def install_local_skill(
     clean_code = code.strip()
     if not clean_code:
         raise HTTPException(status_code=400, detail="技能代码不能为空。")
+    assert_code_safe(clean_code)
 
     skill_path = skill_file_path(skill_id)
     if skill_path.exists() and not overwrite:

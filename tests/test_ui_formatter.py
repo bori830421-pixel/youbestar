@@ -93,6 +93,24 @@ class UiFormatterTest(unittest.TestCase):
         self.assertIn("# 🔍 网页搜索结果", result)
         self.assertNotIn("# ❌ 执行失败", result)
 
+    def test_structured_result_can_include_markdown_image_cells(self):
+        image = "![SKU图](https://example.com/p.jpg)"
+        result = format_skill_result(
+            {
+                "ok": True,
+                "kind": "factory_product_quote",
+                "title": "工厂报价查询结果",
+                "columns": ["SKU图", "货号"],
+                "rows": [[image, "PD1102"]],
+                "summary": {"货号": "PD1102", "SKU图": image},
+            }
+        )
+
+        self.assertIn("| SKU图 | 货号 |", result)
+        self.assertIn(image, result)
+        self.assertNotIn(f"**{image}**", result)
+        self.assertIn(f"SKU图：{image}", result)
+
 
 if __name__ == "__main__":
     unittest.main()

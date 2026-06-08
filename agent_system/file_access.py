@@ -43,9 +43,14 @@ DENIED_DIR_NAMES = {
     "__pycache__",
     "build",
     "data",
+    "db",
     "dist",
+    "database",
     "node_modules",
+    "profile",
     "runtime",
+    "storage",
+    "venv",
     "wheels",
 }
 
@@ -67,6 +72,7 @@ DENIED_NAME_KEYWORDS = {
     "passwd",
     "private_key",
     "secret",
+    "sqlite",
     "token",
 }
 

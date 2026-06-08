@@ -24,6 +24,25 @@ BUSINESS_MEMORY_KEYWORDS = {
     "finance_report": ("财务", "报表", "利润", "成本", "应收", "应付"),
     "transaction": ("交易", "付款", "收款", "转账"),
 }
+NON_MEMORY_ACTIONS = {
+    "local.factory_quote",
+    "official.query_weather",
+    "official.query_market_data",
+    "official.web_query",
+}
+QUOTE_LOOKUP_HINTS = (
+    "报价",
+    "尺寸",
+    "装箱",
+    "毛重",
+    "净重",
+    "成本",
+    "利润",
+    "含税",
+    "含运费",
+    "实拍图",
+)
+ORDER_COMMIT_HINTS = ("下单", "订单", "购买", "采购", "销售", "成交", "付款", "收款")
 
 
 def utc_now() -> str:
@@ -246,6 +265,9 @@ class Memory:
         result: str = "",
         module: str = "general",
     ) -> dict[str, Any]:
+        if self._should_skip_candidate_detection(user_input, action, result):
+            return {"ok": False, "reason": "query_result_not_memory", "candidate": None}
+
         text = " ".join([user_input or "", action or "", result or ""])
         for memory_type, keywords in BUSINESS_MEMORY_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
@@ -261,6 +283,19 @@ class Memory:
                     metadata=metadata,
                 )
         return {"ok": False, "reason": "no_business_signal", "candidate": None}
+
+    def _should_skip_candidate_detection(self, user_input: str, action: str, result: str) -> bool:
+        clean_action = (action or "").strip()
+        clean_user_input = user_input or ""
+        if clean_action in NON_MEMORY_ACTIONS:
+            return True
+
+        has_quote_lookup_hint = any(hint in clean_user_input for hint in QUOTE_LOOKUP_HINTS)
+        has_order_commit_hint = any(hint in clean_user_input for hint in ORDER_COMMIT_HINTS)
+        if has_quote_lookup_hint and not has_order_commit_hint:
+            return True
+
+        return False
 
     def pending_as_dicts(self) -> list[dict[str, Any]]:
         return [self._candidate_payload(record) for record in self.pending_candidates]

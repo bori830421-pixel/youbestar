@@ -86,5 +86,13 @@
     "title": "写入项目文件",
     "description": "在项目白名单目录内写入普通文本或代码文件，可用于修改运行目录内的项目文件。",
     "author": "youbestar"
+  },
+  "local.factory_quote": {
+    "path": "agent_system/skills/local/factory_quote.py",
+    "version": "0.1.0",
+    "source": "local",
+    "title": "工厂报价资料查询",
+    "description": "从工厂 Excel 报价表解析产品资料，按工厂名称和货号查询尺寸、装箱、重量、成本价，并生成图片资产候选。",
+    "author": "youbestar"
   }
 }

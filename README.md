@@ -39,11 +39,48 @@ start.bat
 http://127.0.0.1:8000/
 ```
 
+## 本地技能和知识库迁移
+
+Youbestar 的本地智能体资产主要在这些位置：
+
+- 本地技能：`agent_system\skills\local`
+- 技能注册表：`agent_system\skills\registry.json`
+- 本地知识库/业务资料库：`data`
+
+如果公司电脑和家里电脑不通过 GitHub 同步本地技能和知识库，可以用两个脚本手动迁移：
+
+```bat
+pack_youbestar_local_skills.bat
+inject_youbestar_local_skills.bat
+```
+
+`pack_youbestar_local_skills.bat` 会把本地技能、`local.*` 注册信息、技能开关、`tools` 支撑代码、`data` 知识库以及这两个迁移脚本一起打包成 `youbestar_local_skills_bundle_时间.zip`。脚本放在哪个文件夹都能运行；不传参数时，包输出到脚本所在目录。打包完成后会自动打开输出文件夹并选中压缩包。
+
+```bat
+pack_youbestar_local_skills.bat D:\我的备份包
+```
+
+`inject_youbestar_local_skills.bat` 会把打包文件注入当前电脑的 Youbestar 项目，合并 `local.*` 技能注册表，并在注入前自动备份被覆盖的本地资产到 `agent_system\import_backups\时间`。
+
+```bat
+inject_youbestar_local_skills.bat D:\我的备份包\youbestar_local_skills_bundle_20260609_011910.zip
+```
+
+如果脚本找不到项目目录，可以设置环境变量 `YOUBESTAR_HOME`，或把项目路径作为第二个参数：
+
+```bat
+inject_youbestar_local_skills.bat D:\我的备份包\bundle.zip D:\codex_projects\youbestar
+```
+
+打包会排除 `youbestar.json`、`.env`、`.git`、`.venv` 和名字命中 token/cookie/credential/secret/password/api_key/auth 的文件。由于包里包含你的知识库和业务数据，请只放在可信的私有位置。
+
 ## 模型配置
 
 首次打开网页后，需要填写：
 
+- 接口名称，例如 `OpenAI 中转`
 - API 地址，例如 `https://api.deepseek.com/v1`
+- 接口协议：普通 OpenAI-compatible 聊天接口选择 `Chat Completions`；只兼容 OpenAI Responses API 的中转接口选择 `Responses`
 - 模型名
 - API Key
 
@@ -64,7 +101,21 @@ https://api.deepseek.com/v1
 
 拉取成功后，模型名输入框可以搜索和选择返回的模型。第三方接口不支持 `/models` 时，仍然可以手动填写模型名。
 
-如果只填写供应商根地址，并且根 `/models` 返回 `404`，Youbestar 会尝试 `/v1/models`。成功后会自动把配置地址规范为对应的 `/v1` 基地址。
+如果只填写供应商根地址，Youbestar 会按 OpenAI-compatible 客户端习惯优先尝试 `/v1/models`，再尝试 `/models`。成功后会自动把配置地址规范为实际可用的基地址。
+
+Responses 中转示例：
+
+```text
+接口名称：OpenAI 中转
+API 地址：http://43.133.32.30
+接口协议：Responses
+模型名：gpt-5.5
+API Key：你的中转接口 Key
+```
+
+如果你的中转文档明确要求 `/v1/responses`，API 地址就填 `http://43.133.32.30/v1`；如果像 Codex 配置里的 `base_url` 一样就是根地址，则填根地址。
+
+如果模型列表接口不支持 `/v1/models` 或 `/models`，点击“获取模型”可能失败；这不影响手动填写模型名后保存和登录。
 
 ## 对话模式
 
@@ -74,6 +125,13 @@ https://api.deepseek.com/v1
 - `允许工具`：允许调用 `official.*` 官方工具，例如天气、股票、网页查询、浏览器和文件工具。
 - `允许技能`：允许调用 `local.*` / `community.*` 已注册技能。
 
+左侧“自我进化”页提供独立总闸：
+
+- 关闭时，智能体不能通过聊天或 `/skills` 管理接口读取/修改自身项目文件、写技能、写测试或安装本地技能。
+- 开启时，允许读取和修改当前项目白名单内的普通代码/文本文件，并允许创建或覆盖 `local.*` 本地技能。
+- 即使开启，仍然禁止访问 `.env`、`youbestar.json`、`.git`、虚拟环境、缓存、数据库、业务数据目录、token、cookie、credential 等敏感路径。
+- 自我进化动作属于 `official.*` 工具能力，因此开启自我进化时前端会同时开启“允许工具”。
+
 前端请求 `/chat` 时会传：
 
 ```json
@@ -81,7 +139,8 @@ https://api.deepseek.com/v1
   "message": "你好",
   "allowChat": true,
   "allowTools": true,
-  "allowSkills": true
+  "allowSkills": true,
+  "allowSelfEvolution": false
 }
 ```
 

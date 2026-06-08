@@ -125,6 +125,48 @@ class AgentRuntimeTest(unittest.TestCase):
         self.assertEqual(result.observation, "技能调用未开启：local.parse_order")
         run_mock.assert_not_called()
 
+    @patch("core.agent_nodes.run_approved_skill", return_value="should not run")
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_self_evolution_action_is_blocked_when_disabled(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="self-evolution-disabled",
+            user_input="读取代码",
+            action="official.read_file",
+            params={"path": "server.py"},
+            allow_tools=True,
+            allow_skills=True,
+            allow_self_evolution=False,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation, "自我进化未开启：official.read_file")
+        run_mock.assert_not_called()
+        approved_mock.assert_not_called()
+        enabled_mock.assert_not_called()
+
+    @patch("core.agent_nodes.run_approved_skill", return_value="file content")
+    @patch("core.agent_nodes.is_skill_enabled", return_value=True)
+    @patch("core.agent_nodes.is_approved_skill", return_value=True)
+    def test_self_evolution_action_runs_when_enabled(self, approved_mock, enabled_mock, run_mock):
+        state = AgentState(
+            thread_id="self-evolution-enabled",
+            user_input="读取代码",
+            action="official.read_file",
+            params={"path": "server.py"},
+            allow_tools=True,
+            allow_skills=True,
+            allow_self_evolution=True,
+        )
+
+        result = run_action(state)
+
+        self.assertEqual(result.observation, "file content")
+        run_mock.assert_called_once_with("official.read_file", {"path": "server.py"})
+        approved_mock.assert_called_once_with("official.read_file")
+        enabled_mock.assert_called_once_with("official.read_file")
+
     @patch(
         "core.agent_nodes.run_approved_skill",
         return_value={

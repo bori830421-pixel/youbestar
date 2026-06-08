@@ -11,6 +11,14 @@ def bold(value: Any) -> str:
     return f"**{value}**"
 
 
+def _is_markdown_image(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"!\[[^\]]*\]\([^)]+\)", value.strip()) is not None
+
+
+def _bold_for_display(value: Any) -> Any:
+    return value if _is_markdown_image(value) else bold(value)
+
+
 def markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     header_line = "| " + " | ".join(headers) + " |"
     divider = "| " + " | ".join(["---"] * len(headers)) + " |"
@@ -133,7 +141,7 @@ def format_weather_result(text: str) -> str:
 
 
 def _emphasize_table_rows(rows: list[list[Any]]) -> list[list[Any]]:
-    return [[bold(cell) if index in (0, 1) and cell not in ("", None, "-") else cell for index, cell in enumerate(row)] for row in rows]
+    return [[_bold_for_display(cell) if index in (0, 1) and cell not in ("", None, "-") else cell for index, cell in enumerate(row)] for row in rows]
 
 
 def format_skill_result(result: Any) -> str:
@@ -156,7 +164,7 @@ def format_skill_result(result: Any) -> str:
             summary_lines: list[str] = []
             if isinstance(summary, dict):
                 for key, value in summary.items():
-                    summary_lines.append(f"{key}：{bold(value)}")
+                    summary_lines.append(f"{key}：{_bold_for_display(value)}")
             summary_block = "\n".join(summary_lines) if summary_lines else "已整理完成。"
             return (
                 f"# 🔍 {title}\n\n"

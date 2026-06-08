@@ -37,6 +37,23 @@ class UiScrollTest(unittest.TestCase):
         self.assertIn("scrollbar-gutter: stable;", self.html)
         self.assertIn("overflow-y: auto;", self.html)
 
+    def test_chat_messages_allow_horizontal_scroll_for_wide_tables(self):
+        self.assertRegex(
+            self.html,
+            r"\.messages\s*\{[^}]*overflow-y:\s*auto;[^}]*overflow-x:\s*auto;",
+        )
+        self.assertRegex(
+            self.html,
+            r"\.markdown-table-wrap\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*auto;",
+        )
+
+    def test_conversation_pane_can_collapse(self):
+        self.assertIn('id="conversation-collapse-button"', self.html)
+        self.assertIn(".chat-view.conversation-collapsed", self.html)
+        self.assertIn("CONVERSATION_COLLAPSED_STORAGE_KEY", self.html)
+        self.assertIn("function setConversationPaneCollapsed(collapsed)", self.html)
+        self.assertIn('conversationCollapseButton.addEventListener("click"', self.html)
+
 
 if __name__ == "__main__":
     unittest.main()

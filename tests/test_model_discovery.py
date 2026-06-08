@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from core.model_discovery import discover_models, normalize_models_api_url, parse_model_ids
+import requests
+
+from core.model_discovery import discover_models, models_url_candidates, normalize_models_api_url, parse_model_ids
 
 
 class ModelDiscoveryTest(unittest.TestCase):
@@ -17,6 +19,16 @@ class ModelDiscoveryTest(unittest.TestCase):
         self.assertEqual(
             normalize_models_api_url("https://api.example.com/v1/models"),
             "https://api.example.com/v1/models",
+        )
+        self.assertEqual(
+            normalize_models_api_url("https://api.example.com/v1/responses"),
+            "https://api.example.com/v1/models",
+        )
+
+    def test_root_api_model_candidates_match_openai_base_url_shape(self):
+        self.assertEqual(
+            models_url_candidates("http://43.133.32.30"),
+            ["http://43.133.32.30/v1/models", "http://43.133.32.30/models"],
         )
 
     def test_parses_common_model_response_shapes(self):
@@ -53,21 +65,44 @@ class ModelDiscoveryTest(unittest.TestCase):
         )
 
     @patch("core.model_discovery.requests.get")
-    def test_root_api_falls_back_to_v1_models_after_404(self, get_mock):
-        missing = Mock(status_code=404)
-        missing.raise_for_status.return_value = None
+    def test_root_api_tries_v1_models_before_root_models(self, get_mock):
         found = Mock(status_code=200)
         found.json.return_value = {"data": [{"id": "deepseek-chat"}]}
-        found.raise_for_status.return_value = None
-        get_mock.side_effect = [missing, found]
+        get_mock.return_value = found
 
         result = discover_models("https://api.deepseek.com", "secret-key")
 
         self.assertEqual(result["api_url"], "https://api.deepseek.com/v1")
         self.assertEqual(result["models_url"], "https://api.deepseek.com/v1/models")
-        self.assertEqual(get_mock.call_count, 2)
-        self.assertEqual(get_mock.call_args_list[0].args[0], "https://api.deepseek.com/models")
-        self.assertEqual(get_mock.call_args_list[1].args[0], "https://api.deepseek.com/v1/models")
+        self.assertEqual(get_mock.call_count, 1)
+        self.assertEqual(get_mock.call_args_list[0].args[0], "https://api.deepseek.com/v1/models")
+
+    @patch("core.model_discovery.requests.get")
+    def test_continues_to_next_candidate_after_non_model_json(self, get_mock):
+        non_model = Mock(status_code=200)
+        non_model.json.return_value = {"ok": True}
+        found = Mock(status_code=200)
+        found.json.return_value = {"data": [{"id": "gpt-5.5"}]}
+        get_mock.side_effect = [non_model, found]
+
+        result = discover_models("http://43.133.32.30", "secret-key")
+
+        self.assertEqual(result["api_url"], "http://43.133.32.30")
+        self.assertEqual(result["models_url"], "http://43.133.32.30/models")
+        self.assertEqual(result["models"], ["gpt-5.5"])
+        self.assertEqual(get_mock.call_args_list[0].args[0], "http://43.133.32.30/v1/models")
+        self.assertEqual(get_mock.call_args_list[1].args[0], "http://43.133.32.30/models")
+
+    @patch("core.model_discovery.requests.get")
+    def test_continues_to_next_candidate_after_request_error(self, get_mock):
+        found = Mock(status_code=200)
+        found.json.return_value = {"models": ["gpt-5.5"]}
+        get_mock.side_effect = [requests.ConnectionError("gateway refused"), found]
+
+        result = discover_models("http://43.133.32.30", "secret-key")
+
+        self.assertEqual(result["models_url"], "http://43.133.32.30/models")
+        self.assertEqual(result["models"], ["gpt-5.5"])
 
     def test_rejects_response_without_models(self):
         with self.assertRaisesRegex(ValueError, "没有返回可用模型"):

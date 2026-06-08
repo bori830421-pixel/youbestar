@@ -175,6 +175,13 @@
       min-height: 42px;
     }
 
+    .config-two-column {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 0.5fr);
+      gap: 10px;
+      align-items: end;
+    }
+
     .model-discovery-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -477,6 +484,10 @@
       overflow: hidden;
     }
 
+    .chat-view.conversation-collapsed {
+      grid-template-columns: 48px minmax(420px, 1fr);
+    }
+
     .conversation-pane {
       min-width: 0;
       min-height: 0;
@@ -502,6 +513,35 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+    }
+
+    .pane-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .conversation-collapse-button svg {
+      transition: transform 0.18s ease;
+    }
+
+    .chat-view.conversation-collapsed .conversation-collapse-button svg {
+      transform: rotate(180deg);
+    }
+
+    .chat-view.conversation-collapsed .pane-header {
+      padding: 14px 5px;
+    }
+
+    .chat-view.conversation-collapsed .pane-title-row {
+      justify-content: center;
+    }
+
+    .chat-view.conversation-collapsed .pane-title-row h3,
+    .chat-view.conversation-collapsed .pane-actions,
+    .chat-view.conversation-collapsed .conversation-filter,
+    .chat-view.conversation-collapsed .conversation-list {
+      display: none;
     }
 
     .conversation-list {
@@ -599,7 +639,7 @@
     .messages {
       min-height: 0;
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: auto;
       padding: 28px 28px 36px;
       display: flex;
       flex-direction: column;
@@ -615,6 +655,7 @@
     }
 
     .message-row {
+      min-width: 0;
       display: grid;
       grid-template-columns: 40px minmax(0, min(1120px, calc(100vw - 380px)));
       gap: 12px;
@@ -638,6 +679,7 @@
     }
 
     .bubble {
+      min-width: 0;
       max-width: 100%;
       border-radius: 8px;
       padding: 14px 16px;
@@ -661,6 +703,7 @@
 
     .reply-card,
     .trace-card {
+      min-width: 0;
       border-radius: 8px;
       padding: 14px 16px;
       line-height: 1.65;
@@ -712,6 +755,7 @@
 
     .markdown-table-wrap {
       width: 100%;
+      max-width: 100%;
       overflow-x: auto;
       margin: 8px 0 12px;
     }
@@ -737,6 +781,22 @@
     .reply-card th {
       background: #f7f8fa;
       font-weight: 700;
+    }
+
+    .reply-card img.markdown-image {
+      width: 86px;
+      height: 86px;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1px solid #d9dde5;
+      background: #fff;
+      display: block;
+    }
+
+    .reply-card p img.markdown-image {
+      width: min(240px, 100%);
+      height: auto;
+      max-height: 240px;
     }
 
     .trace-card {
@@ -911,7 +971,8 @@
       max-height: 140px;
     }
 
-    .skills-view {
+    .skills-view,
+    .evolution-view {
       min-height: 0;
       height: 100%;
       display: grid;
@@ -920,12 +981,18 @@
       background: var(--surface);
     }
 
-    .skills-topbar {
+    .skills-view {
+      min-height: 0;
+    }
+
+    .skills-topbar,
+    .evolution-topbar {
       padding: 0 22px;
       border-bottom: 1px solid var(--line);
     }
 
-    .skills-title-row {
+    .skills-title-row,
+    .evolution-title-row {
       display: flex;
       align-items: center;
       gap: 14px;
@@ -936,6 +1003,95 @@
     .skills-title-row h2 {
       flex: 0 0 auto;
       white-space: nowrap;
+    }
+
+    .evolution-content {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 24px;
+      background: #fafafa;
+    }
+
+    .evolution-panel {
+      max-width: 860px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .evolution-switch-row {
+      min-height: 72px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      background: var(--surface);
+    }
+
+    .evolution-switch-row strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .switch input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #cfd4dc;
+      transition: background 0.16s ease;
+    }
+
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+      transition: transform 0.16s ease;
+    }
+
+    .switch input:checked + .switch-track {
+      background: var(--primary);
+    }
+
+    .switch input:checked + .switch-track::after {
+      transform: translateX(22px);
+    }
+
+    .evolution-rules {
+      display: grid;
+      gap: 10px;
+    }
+
+    .evolution-rule {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: var(--surface);
+    }
+
+    .evolution-rule strong {
+      display: block;
+      margin-bottom: 6px;
     }
 
     .dot {
@@ -1317,6 +1473,13 @@
       .composer-box {
         grid-template-columns: 1fr;
       }
+
+      .profile-row,
+      .config-two-column,
+      .model-discovery-row,
+      .model-picker {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -1339,9 +1502,22 @@
         </div>
         <div class="subtle">切换接口配置会自动填入对应 API 地址、API Key 和模型名。</div>
       </div>
+      <div class="config-two-column">
+        <div class="field">
+          <label for="profile-name">接口名称</label>
+          <input id="profile-name" type="text" placeholder="例如 OpenAI 中转 / DeepSeek">
+        </div>
+        <div class="field">
+          <label for="wire-api">接口协议</label>
+          <select id="wire-api">
+            <option value="chat_completions">Chat Completions</option>
+            <option value="responses">Responses</option>
+          </select>
+        </div>
+      </div>
       <div class="field">
         <label for="api-url">API 地址</label>
-        <input id="api-url" type="url" placeholder="https://api.deepseek.com/v1" required>
+        <input id="api-url" type="url" placeholder="https://api.openai.com/v1 或 http://43.133.32.30/v1" required>
       </div>
       <div class="field">
         <label for="api-key">API Key</label>
@@ -1403,6 +1579,10 @@
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4H8zM4 14h7v6H4zM13 14h7v6h-7zM12 8v4M7.5 14v-2h9v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
             <span class="nav-text">技能</span>
           </button>
+          <button id="nav-evolution-button" class="nav-item" type="button" title="自我进化" aria-label="自我进化">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M3 12h4M17 12h4M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8M12 8l2 4-2 4-2-4 2-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-text">自我进化</span>
+          </button>
         </div>
       </div>
 
@@ -1413,7 +1593,7 @@
           <strong>default</strong>
         </div>
         <div class="meta">模型</div>
-        <select id="model-display" disabled>
+        <select id="model-display">
           <option>未连接</option>
         </select>
         <button id="logout-button" class="ghost-button" type="button">退出登录</button>
@@ -1426,8 +1606,11 @@
         <aside class="conversation-pane">
           <div class="pane-header">
             <div class="pane-title-row">
+              <button id="conversation-collapse-button" class="icon-button conversation-collapse-button" type="button" title="收起会话栏" aria-label="收起会话栏" aria-expanded="true">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
               <h3>会话</h3>
-              <div>
+              <div class="pane-actions">
                 <button class="icon-button" type="button" title="编辑">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4zM13 7l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
                 </button>
@@ -1436,7 +1619,7 @@
                 </button>
               </div>
             </div>
-            <select>
+            <select class="conversation-filter">
               <option>全部配置</option>
             </select>
           </div>
@@ -1563,6 +1746,51 @@
           </main>
         </div>
       </section>
+
+      <section id="evolution-view" class="evolution-view" hidden>
+        <header class="evolution-topbar">
+          <div class="evolution-title-row">
+            <h2>自我进化</h2>
+            <div class="subtle">控制智能体是否可以读取和修改自身项目代码。</div>
+          </div>
+        </header>
+
+        <main class="evolution-content">
+          <div class="evolution-panel">
+            <section class="doc-section">
+              <h1>自我进化权限</h1>
+              <p>开启后，Youbestar Agent 可以在当前项目白名单目录内读取普通代码文件、写入普通项目文件、安装或覆盖本地技能，并为自己的能力迭代准备测试。</p>
+              <p>关闭后，聊天仍可使用普通工具和技能，但读取项目文件、写入项目文件、写技能、安装本地技能等自修改动作会被后端拦截。</p>
+            </section>
+
+            <label class="evolution-switch-row" for="allow-self-evolution-toggle">
+              <div>
+                <strong>允许智能体修改自己</strong>
+                <div id="self-evolution-status" class="subtle">当前关闭：禁止读取和修改自身项目代码。</div>
+              </div>
+              <span class="switch" aria-hidden="true">
+                <input id="allow-self-evolution-toggle" type="checkbox">
+                <span class="switch-track"></span>
+              </span>
+            </label>
+
+            <section class="evolution-rules">
+              <div class="evolution-rule">
+                <strong>开启后允许</strong>
+                <p class="subtle">读取普通项目代码文件、写入普通项目文件、创建或覆盖 <code>local.*</code> 技能、写入技能测试，并让运行时按这些能力继续工作。</p>
+              </div>
+              <div class="evolution-rule">
+                <strong>始终保护</strong>
+                <p class="subtle">密钥、token、cookie、<code>.env</code>、<code>youbestar.json</code>、<code>.git</code>、虚拟环境、缓存、数据库和本地业务数据目录仍然禁止读取或写入。</p>
+              </div>
+              <div class="evolution-rule">
+                <strong>执行边界</strong>
+                <p class="subtle">这个开关会随每次聊天请求发送到后端；后端执行工具前会再次检查，避免只靠界面状态决定权限。</p>
+              </div>
+            </section>
+          </div>
+        </main>
+      </section>
     </div>
   </section>
 
@@ -1582,12 +1810,15 @@
   </div>
 
   <script>
-    const API_ORIGIN = "http://127.0.0.1:8000";
+    const API_ORIGIN = window.location.protocol === "http:"
+      ? window.location.origin
+      : "http://127.0.0.1:8000";
     const CHAT_URL = `${API_ORIGIN}/chat`;
     const MEMORY_CONFIRM_URL = `${API_ORIGIN}/memory/confirm`;
     const MEMORY_REJECT_URL = `${API_ORIGIN}/memory/reject`;
     const CONFIG_URL = `${API_ORIGIN}/config`;
     const MODELS_DISCOVER_URL = `${API_ORIGIN}/models/discover`;
+    const SELF_EVOLUTION_SETTINGS_URL = `${API_ORIGIN}/self-evolution/settings`;
     const REGISTRY_URL = `${API_ORIGIN}/skills/registry`;
     const TOGGLE_URL = `${API_ORIGIN}/skills/toggle`;
     const APPROVALS_URL = `${API_ORIGIN}/skills/approvals`;
@@ -1601,6 +1832,8 @@
     const loginButton = document.getElementById("login-button");
     const profileSelect = document.getElementById("profile-select");
     const saveProfileButton = document.getElementById("save-profile-button");
+    const profileNameInput = document.getElementById("profile-name");
+    const wireApiSelect = document.getElementById("wire-api");
     const apiUrlInput = document.getElementById("api-url");
     const modelInput = document.getElementById("model-name");
     const apiKeyInput = document.getElementById("api-key");
@@ -1613,8 +1846,10 @@
     const connectionStatus = document.getElementById("connection-status");
     const navChatButton = document.getElementById("nav-chat-button");
     const navSkillsButton = document.getElementById("nav-skills-button");
+    const navEvolutionButton = document.getElementById("nav-evolution-button");
     const chatView = document.getElementById("chat-view");
     const skillsView = document.getElementById("skills-view");
+    const evolutionView = document.getElementById("evolution-view");
     const conversationList = document.getElementById("conversation-list");
     const chatTitle = document.getElementById("chat-title");
     const messagesEl = document.getElementById("messages");
@@ -1634,11 +1869,14 @@
     const allowToolLabel = document.getElementById("allow-tool-label");
     const allowSkillToggle = document.getElementById("allow-skill-toggle");
     const allowSkillLabel = document.getElementById("allow-skill-label");
+    const allowSelfEvolutionToggle = document.getElementById("allow-self-evolution-toggle");
+    const selfEvolutionStatus = document.getElementById("self-evolution-status");
     const modeHint = document.getElementById("mode-hint");
     const backConfigButton = document.getElementById("back-config-button");
     const logoutButton = document.getElementById("logout-button");
     const newChatButton = document.getElementById("new-chat-button");
     const newChatHeaderButton = document.getElementById("new-chat-header-button");
+    const conversationCollapseButton = document.getElementById("conversation-collapse-button");
     const enabledSkillCount = document.getElementById("enabled-skill-count");
     const skillsListPane = document.getElementById("skills-list-pane");
     const skillSearch = document.getElementById("skill-search");
@@ -1647,6 +1885,7 @@
 
     const CONVERSATION_STORAGE_KEY = "youbestar.conversations.v1";
     const ACTIVE_CONVERSATION_STORAGE_KEY = "youbestar.activeConversationId.v1";
+    const CONVERSATION_COLLAPSED_STORAGE_KEY = "youbestar.conversationPaneCollapsed.v1";
     const AGENT_MODE_STORAGE_KEY = "youbestar.agentMode.v1";
     const conversations = [];
     let activeConversationId = null;
@@ -1663,11 +1902,21 @@
     let currentProfileId = "default";
     let isApplyingProfile = false;
 
+    function normalizeWireApi(value) {
+      const cleanValue = String(value || "chat_completions").trim().toLowerCase().replaceAll("-", "_");
+      if (cleanValue === "responses" || cleanValue === "response") {
+        return "responses";
+      }
+      return "chat_completions";
+    }
+
     function getConfig() {
       return {
+        name: profileNameInput.value.trim(),
         api_url: apiUrlInput.value.trim(),
         model: modelInput.value.trim(),
         api_key: apiKeyInput.value.trim(),
+        wire_api: normalizeWireApi(wireApiSelect.value),
         current_profile_id: currentProfileId,
         profiles: configProfiles,
       };
@@ -1724,12 +1973,16 @@
       return profile.name || profile.api_url || profile.id || "默认接口";
     }
 
-    function profileIdFromApiUrl(apiUrl) {
+    function profileIdFromNameOrApiUrl(name, apiUrl) {
+      const cleanName = String(name || "").trim();
       const cleanUrl = String(apiUrl || "").trim();
-      if (!cleanUrl) {
-        return `profile-${Date.now()}`;
-      }
-      return cleanUrl.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `profile-${Date.now()}`;
+      const nameId = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const apiUrlId = cleanUrl.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      return nameId || apiUrlId || `profile-${Date.now()}`;
+    }
+
+    function profileIdFromApiUrl(apiUrl) {
+      return profileIdFromNameOrApiUrl("", apiUrl);
     }
 
     function normalizeConfigProfiles(data) {
@@ -1743,10 +1996,11 @@
         const apiUrl = String(profile.api_url || "").trim();
         const model = String(profile.model || "").trim();
         const apiKey = String(profile.api_key || "").trim();
+        const wireApi = normalizeWireApi(profile.wire_api || data.wire_api);
         if (!apiUrl && !model && !apiKey) {
           return;
         }
-        const id = String(profile.id || profile.name || profileIdFromApiUrl(apiUrl)).trim();
+        const id = String(profile.id || profile.name || profileIdFromNameOrApiUrl(profile.name, apiUrl)).trim();
         if (!id || seen.has(id)) {
           return;
         }
@@ -1756,6 +2010,7 @@
           api_url: apiUrl,
           model,
           api_key: apiKey,
+          wire_api: wireApi,
         });
         seen.add(id);
       });
@@ -1766,10 +2021,11 @@
         const fallbackId = activeProfileId || "default";
         const fallbackProfile = {
           id: fallbackId,
-          name: "默认接口",
+          name: String(data.name || "默认接口").trim(),
           api_url: String(data.api_url || "https://api.openai.com/v1").trim(),
           model: String(data.model || "gpt-4o-mini").trim(),
           api_key: String(data.api_key || "").trim(),
+          wire_api: normalizeWireApi(data.wire_api),
         };
         const existingIndex = normalized.findIndex((profile) => profile.id === fallbackId);
         if (existingIndex >= 0) {
@@ -1801,6 +2057,69 @@
       return configProfiles.find((profile) => profile.id === currentProfileId) || null;
     }
 
+    function profileModels() {
+      const models = new Set();
+      configProfiles.forEach((profile) => {
+        const model = String(profile.model || "").trim();
+        if (model) {
+          models.add(model);
+        }
+      });
+      discoveredModels.forEach((model) => {
+        const cleanModel = String(model || "").trim();
+        if (cleanModel) {
+          models.add(cleanModel);
+        }
+      });
+      const currentModelName = modelInput.value.trim();
+      if (currentModelName) {
+        models.add(currentModelName);
+      }
+      return Array.from(models);
+    }
+
+    function renderModelDisplay() {
+      const selectedModel = modelInput.value.trim() || "未连接";
+      const models = profileModels();
+      modelDisplay.innerHTML = "";
+      if (!models.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "未连接";
+        modelDisplay.appendChild(option);
+        modelDisplay.disabled = true;
+        return;
+      }
+      models.forEach((modelName) => {
+        const option = document.createElement("option");
+        option.value = modelName;
+        option.textContent = modelName;
+        modelDisplay.appendChild(option);
+      });
+      modelDisplay.disabled = false;
+      modelDisplay.value = selectedModel;
+    }
+
+    async function selectRuntimeModel(modelName) {
+      const cleanModelName = String(modelName || "").trim();
+      if (!cleanModelName || cleanModelName === modelInput.value.trim()) {
+        renderModelDisplay();
+        return;
+      }
+      modelInput.value = cleanModelName;
+      upsertCurrentProfile({ createIfMissing: true });
+      renderModelDisplay();
+      updateCurrentModelLabel();
+      await saveConfig();
+    }
+
+    function updateCurrentModelLabel() {
+      const config = getConfig();
+      const activeProfileName = config.name || currentProfile()?.name || "当前接口";
+      const protocolLabel = config.wire_api === "responses" ? "Responses" : "Chat Completions";
+      currentModel.textContent = `${activeProfileName} · ${config.model} · ${protocolLabel} · ${config.api_url}`;
+    }
+
     function applyProfile(profileId) {
       const profile = configProfiles.find((item) => item.id === profileId);
       if (!profile) {
@@ -1808,12 +2127,16 @@
       }
       isApplyingProfile = true;
       currentProfileId = profile.id;
+      profileNameInput.value = profile.name || "";
       apiUrlInput.value = profile.api_url || "";
       modelInput.value = profile.model || "";
       apiKeyInput.value = profile.api_key || "";
+      wireApiSelect.value = normalizeWireApi(profile.wire_api);
       discoveredModels = [];
       hideModelOptions();
       renderProfileSelect();
+      renderModelDisplay();
+      updateCurrentModelLabel();
       configSaved = isConfigComplete();
       setStatus(configSaved ? `已切换到 ${profileLabel(profile)}。` : "请补全配置。", configSaved ? "success" : "");
       updateLoginState();
@@ -1824,29 +2147,36 @@
     function startNewProfile() {
       currentProfileId = `profile-${Date.now()}`;
       profileSelect.value = "__new_profile__";
+      profileNameInput.value = "";
       apiUrlInput.value = "";
       modelInput.value = "";
       apiKeyInput.value = "";
+      wireApiSelect.value = "chat_completions";
       discoveredModels = [];
       hideModelOptions();
       configSaved = false;
-      setStatus("正在新建接口配置，请填写 API 地址、API Key 和模型名后保存。");
+      setStatus("正在新建接口配置，请填写接口名称、API 地址、API Key、协议和模型名后保存。");
       updateLoginState();
-      apiUrlInput.focus();
+      profileNameInput.focus();
     }
 
     function buildProfileFromInputs(existingProfile = null) {
+      const profileName = profileNameInput.value.trim();
       const apiUrl = apiUrlInput.value.trim();
       const model = modelInput.value.trim();
       const apiKey = apiKeyInput.value.trim();
-      const id = existingProfile?.id || profileIdFromApiUrl(apiUrl);
-      const name = existingProfile?.name || apiUrl.replace(/^https?:\/\//, "").replace(/\/v1\/?$/, "") || "默认接口";
+      const wireApi = normalizeWireApi(wireApiSelect.value);
+      const id = existingProfile?.id || profileIdFromNameOrApiUrl(profileName, apiUrl);
+      const inferredName = apiUrl.replace(/^https?:\/\//, "").replace(/\/v1\/?$/, "").replace(/\/?$/, "");
+      const name = profileName || existingProfile?.name || inferredName || "默认接口";
+      profileNameInput.value = name;
       return {
         id,
         name,
         api_url: apiUrl,
         model,
         api_key: apiKey,
+        wire_api: wireApi,
       };
     }
 
@@ -1942,15 +2272,19 @@
           currentProfileId = configProfiles[0]?.id || "default";
         }
         const activeProfile = currentProfile() || configProfiles[0];
+        profileNameInput.value = activeProfile?.name || data.name || "";
         apiUrlInput.value = activeProfile?.api_url || data.api_url || "https://api.openai.com/v1";
         modelInput.value = activeProfile?.model || data.model || "gpt-4o-mini";
         apiKeyInput.value = activeProfile?.api_key || data.api_key || "";
+        wireApiSelect.value = normalizeWireApi(activeProfile?.wire_api || data.wire_api);
         renderProfileSelect();
         configSaved = isConfigComplete();
         setStatus(configSaved ? "配置已加载。" : "请补全配置。", configSaved ? "success" : "");
       } catch (error) {
+        profileNameInput.value = "默认接口";
         apiUrlInput.value = "https://api.openai.com/v1";
         modelInput.value = "gpt-4o-mini";
+        wireApiSelect.value = "chat_completions";
         configProfiles = [buildProfileFromInputs({ id: "default", name: "默认接口" })];
         currentProfileId = "default";
         renderProfileSelect();
@@ -2023,6 +2357,7 @@
           body: JSON.stringify({
             api_url: apiUrlInput.value.trim(),
             api_key: apiKeyInput.value.trim(),
+            wire_api: normalizeWireApi(wireApiSelect.value),
           }),
         });
         const data = await response.json();
@@ -2039,6 +2374,8 @@
         if (!modelInput.value.trim() && discoveredModels.length) {
           modelInput.value = discoveredModels[0];
         }
+        renderModelDisplay();
+        updateCurrentModelLabel();
         if (apiUrlChanged || modelInput.value.trim()) {
           queueSaveConfig();
         }
@@ -2065,12 +2402,12 @@
 
     function openApp() {
       loadStoredConversations();
-      const config = getConfig();
-      modelDisplay.innerHTML = `<option>${escapeHtml(config.model)}</option>`;
-      currentModel.textContent = `${config.model} · ${config.api_url}`;
+      renderModelDisplay();
+      updateCurrentModelLabel();
       connectionStatus.textContent = "已连接";
       configScreen.hidden = true;
       appShell.hidden = false;
+      loadConversationPaneState();
       if (!conversations.length) {
         createConversation();
       }
@@ -2147,11 +2484,13 @@
     function setActiveNav(active) {
       navChatButton.classList.toggle("active", active === "chat");
       navSkillsButton.classList.toggle("active", active === "skills");
+      navEvolutionButton.classList.toggle("active", active === "evolution");
     }
 
     function showChatView() {
       chatView.hidden = false;
       skillsView.hidden = true;
+      evolutionView.hidden = true;
       setActiveNav("chat");
       renderMessages();
     }
@@ -2159,10 +2498,38 @@
     function showSkillsView() {
       chatView.hidden = true;
       skillsView.hidden = false;
+      evolutionView.hidden = true;
       setActiveNav("skills");
       loadSkills();
       loadApprovals();
       skillSearch.focus();
+    }
+
+    function showEvolutionView() {
+      chatView.hidden = true;
+      skillsView.hidden = true;
+      evolutionView.hidden = false;
+      setActiveNav("evolution");
+    }
+
+    function setConversationPaneCollapsed(collapsed) {
+      chatView.classList.toggle("conversation-collapsed", collapsed);
+      conversationCollapseButton.title = collapsed ? "展开会话栏" : "收起会话栏";
+      conversationCollapseButton.setAttribute("aria-label", collapsed ? "展开会话栏" : "收起会话栏");
+      conversationCollapseButton.setAttribute("aria-expanded", String(!collapsed));
+      try {
+        localStorage.setItem(CONVERSATION_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
+      } catch {
+        // Keep the pane toggle usable even when localStorage is unavailable.
+      }
+    }
+
+    function loadConversationPaneState() {
+      try {
+        setConversationPaneCollapsed(localStorage.getItem(CONVERSATION_COLLAPSED_STORAGE_KEY) === "1");
+      } catch {
+        setConversationPaneCollapsed(false);
+      }
     }
 
     function createConversation() {
@@ -2415,23 +2782,44 @@
       return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
     }
 
-    function appendInlineMarkdown(parent, text) {
-      const parts = String(text || "").split(/(\*\*[^*]+\*\*)/g);
-      parts.forEach((part) => {
-        if (!part) return;
-        const strongMatch = part.match(/^\*\*([^*]+)\*\*$/);
-        if (strongMatch) {
-          const strong = document.createElement("strong");
-          strong.textContent = strongMatch[1];
-          parent.appendChild(strong);
-        } else {
-          const textParts = part.split("\n");
-          textParts.forEach((textPart, partIndex) => {
-            if (partIndex > 0) parent.appendChild(document.createElement("br"));
-            parent.appendChild(document.createTextNode(textPart));
-          });
-        }
+    function appendTextWithLineBreaks(parent, text) {
+      const textParts = String(text || "").split("\n");
+      textParts.forEach((textPart, partIndex) => {
+        if (partIndex > 0) parent.appendChild(document.createElement("br"));
+        parent.appendChild(document.createTextNode(textPart));
       });
+    }
+
+    function appendInlineMarkdown(parent, text) {
+      const source = String(text || "");
+      const tokenPattern = /!\[([^\]]*)\]\(([^)]+)\)|\*\*([\s\S]*?)\*\*/g;
+      let cursor = 0;
+      let match;
+      while ((match = tokenPattern.exec(source)) !== null) {
+        if (match.index > cursor) {
+          appendTextWithLineBreaks(parent, source.slice(cursor, match.index));
+        }
+        if (match[2] !== undefined) {
+          const link = document.createElement("a");
+          link.href = match[2];
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          const image = document.createElement("img");
+          image.className = "markdown-image";
+          image.alt = match[1] || "图片";
+          image.src = match[2];
+          link.appendChild(image);
+          parent.appendChild(link);
+        } else {
+          const strong = document.createElement("strong");
+          strong.textContent = match[3];
+          parent.appendChild(strong);
+        }
+        cursor = tokenPattern.lastIndex;
+      }
+      if (cursor < source.length) {
+        appendTextWithLineBreaks(parent, source.slice(cursor));
+      }
     }
 
     function appendTraceCard(parent, options) {
@@ -2541,6 +2929,7 @@
         allowChat: allowChatToggle.checked,
         allowTools: allowToolToggle.checked,
         allowSkills: allowSkillToggle.checked,
+        allowSelfEvolution: allowSelfEvolutionToggle.checked,
       };
     }
 
@@ -2560,19 +2949,66 @@
         allowChatToggle.checked = mode.allowChat !== false;
         allowToolToggle.checked = mode.allowTools !== false;
         allowSkillToggle.checked = mode.allowSkills !== false;
+        allowSelfEvolutionToggle.checked = mode.allowSelfEvolution === true;
       } catch {
         // Invalid stored mode should not block chat.
       }
     }
 
     function updateAgentModeLabels() {
+      if (allowSelfEvolutionToggle.checked && !allowToolToggle.checked) {
+        allowToolToggle.checked = true;
+      }
       allowChatLabel.textContent = allowChatToggle.checked ? "允许闲聊" : "任务优先";
       allowChatToggle.title = allowChatToggle.checked ? "Chat On：允许自然回复" : "Chat Off：只做任务判断";
       allowToolLabel.textContent = allowToolToggle.checked ? "允许工具" : "禁用工具";
       allowToolToggle.title = allowToolToggle.checked ? "允许 official.* 工具调用" : "禁用 official.* 工具调用";
       allowSkillLabel.textContent = allowSkillToggle.checked ? "允许技能" : "禁用技能";
       allowSkillToggle.title = allowSkillToggle.checked ? "允许 local.* / community.* 技能调用" : "禁用 local.* / community.* 技能调用";
+      selfEvolutionStatus.textContent = allowSelfEvolutionToggle.checked
+        ? "当前开启：允许读取和修改普通项目代码文件。"
+        : "当前关闭：禁止读取和修改自身项目代码。";
+      selfEvolutionStatus.className = allowSelfEvolutionToggle.checked ? "status success" : "subtle";
       saveAgentMode();
+    }
+
+    async function loadSelfEvolutionSettings() {
+      try {
+        const response = await fetch(SELF_EVOLUTION_SETTINGS_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取自我进化设置失败");
+        }
+        allowSelfEvolutionToggle.checked = data.enabled === true;
+      } catch (error) {
+        selfEvolutionStatus.textContent = `自我进化设置读取失败：${error.message}`;
+        selfEvolutionStatus.className = "subtle status error";
+      } finally {
+        updateAgentModeLabels();
+      }
+    }
+
+    async function saveSelfEvolutionSettings() {
+      if (allowSelfEvolutionToggle.checked && !allowToolToggle.checked) {
+        allowToolToggle.checked = true;
+      }
+      updateAgentModeLabels();
+      try {
+        const response = await fetch(SELF_EVOLUTION_SETTINGS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: allowSelfEvolutionToggle.checked }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "保存自我进化设置失败");
+        }
+        allowSelfEvolutionToggle.checked = data.enabled === true;
+        updateAgentModeLabels();
+      } catch (error) {
+        selfEvolutionStatus.textContent = `保存失败：${error.message}`;
+        selfEvolutionStatus.className = "subtle status error";
+      }
     }
 
     function addMessage(role, content, error = false, extra = {}) {
@@ -2665,7 +3101,7 @@
     }
 
     async function sendMessage(message) {
-      const { allowChat, allowTools, allowSkills } = getAgentMode();
+      const { allowChat, allowTools, allowSkills, allowSelfEvolution } = getAgentMode();
       const conversation = activeConversation();
       const previousHistory = conversation ? conversation.history.slice(-20).map((item) => ({
         role: item.role,
@@ -2679,6 +3115,7 @@
         allowChat,
         allowTools,
         allowSkills,
+        allowSelfEvolution,
         responseStartedAt,
       });
       stopActiveResponseTimer();
@@ -2701,6 +3138,7 @@
             allowChat,
             allowTools,
             allowSkills,
+            allowSelfEvolution,
             history: previousHistory,
             threadId: String(conversation ? conversation.id : "default"),
           }),
@@ -2729,6 +3167,7 @@
           allowChat,
           allowTools,
           allowSkills,
+          allowSelfEvolution,
           pending: false,
           responseStartedAt,
           responseDurationMs,
@@ -3003,8 +3442,9 @@
       return date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
     }
 
-    [apiUrlInput, apiKeyInput].forEach((field) => {
+    [profileNameInput, apiUrlInput, apiKeyInput, wireApiSelect].forEach((field) => {
       field.addEventListener("input", queueSaveConfig);
+      field.addEventListener("change", queueSaveConfig);
     });
     profileSelect.addEventListener("change", () => {
       if (profileSelect.value === "__new_profile__") {
@@ -3028,6 +3468,9 @@
     });
     modelInput.addEventListener("focus", () => {
       showModelOptions();
+    });
+    modelDisplay.addEventListener("change", () => {
+      selectRuntimeModel(modelDisplay.value);
     });
     modelPickerButton.addEventListener("click", () => {
       if (modelOptions.hidden) {
@@ -3064,16 +3507,29 @@
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         chatForm.requestSubmit();
+        return;
+      }
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const indent = "  ";
+        input.value = `${input.value.slice(0, start)}${indent}${input.value.slice(end)}`;
+        input.selectionStart = input.selectionEnd = start + indent.length;
       }
     });
 
     skillSearch.addEventListener("input", renderSkills);
     navChatButton.addEventListener("click", showChatView);
     navSkillsButton.addEventListener("click", showSkillsView);
+    navEvolutionButton.addEventListener("click", showEvolutionView);
     backConfigButton.addEventListener("click", showConfig);
     logoutButton.addEventListener("click", showConfig);
     newChatButton.addEventListener("click", createConversation);
     newChatHeaderButton.addEventListener("click", createConversation);
+    conversationCollapseButton.addEventListener("click", () => {
+      setConversationPaneCollapsed(!chatView.classList.contains("conversation-collapsed"));
+    });
     toggleThoughtButton.addEventListener("click", () => {
       showThoughtMode = !showThoughtMode;
       updateModeButtons();
@@ -3087,6 +3543,7 @@
     allowChatToggle.addEventListener("change", updateAgentModeLabels);
     allowToolToggle.addEventListener("change", updateAgentModeLabels);
     allowSkillToggle.addEventListener("change", updateAgentModeLabels);
+    allowSelfEvolutionToggle.addEventListener("change", saveSelfEvolutionSettings);
     memoryConfirmButton.addEventListener("click", () => submitMemoryDecision(MEMORY_CONFIRM_URL, "保存"));
     memoryRejectButton.addEventListener("click", () => submitMemoryDecision(MEMORY_REJECT_URL, "忽略"));
 
@@ -3094,6 +3551,7 @@
     loadAgentMode();
     updateAgentModeLabels();
     loadConfig();
+    loadSelfEvolutionSettings();
   </script>
 </body>
 </html>

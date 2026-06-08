@@ -54,6 +54,7 @@ class AgentRuntime:
         allow_chat: bool = True,
         allow_tools: bool = True,
         allow_skills: bool = True,
+        allow_self_evolution: bool = False,
         thread_id: str = "default",
     ) -> AgentResult:
         state = AgentState(
@@ -62,6 +63,7 @@ class AgentRuntime:
             allow_chat=allow_chat,
             allow_tools=allow_tools,
             allow_skills=allow_skills,
+            allow_self_evolution=allow_self_evolution,
             history=list(memory.history),
             runtime_started_at=time.monotonic(),
         )

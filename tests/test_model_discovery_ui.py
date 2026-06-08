@@ -13,6 +13,9 @@ class ModelDiscoveryUiTest(unittest.TestCase):
     def test_config_page_has_searchable_model_discovery_controls(self):
         self.assertIn('id="profile-select"', self.html)
         self.assertIn('id="save-profile-button"', self.html)
+        self.assertIn('id="profile-name"', self.html)
+        self.assertIn('id="wire-api"', self.html)
+        self.assertIn('value="responses"', self.html)
         self.assertIn('id="discover-models-button"', self.html)
         self.assertIn('id="model-options"', self.html)
         self.assertIn('id="model-picker-button"', self.html)
@@ -28,6 +31,7 @@ class ModelDiscoveryUiTest(unittest.TestCase):
         self.assertIn("modelOptions.appendChild(button)", self.html)
         self.assertIn("const normalizedApiUrl = data.api_url", self.html)
         self.assertIn("apiUrlInput.value = data.api_url", self.html)
+        self.assertIn("wire_api: normalizeWireApi(wireApiSelect.value)", self.html)
         self.assertIn("api_url: apiUrlInput.value.trim()", self.html)
         self.assertIn("api_key: apiKeyInput.value.trim()", self.html)
 
@@ -46,11 +50,21 @@ class ModelDiscoveryUiTest(unittest.TestCase):
         self.assertIn("current_profile_id: currentProfileId", self.html)
         self.assertIn("profiles: configProfiles", self.html)
         self.assertIn("function applyProfile(profileId)", self.html)
+        self.assertIn("profileNameInput.value = profile.name", self.html)
         self.assertIn("apiUrlInput.value = profile.api_url", self.html)
         self.assertIn("modelInput.value = profile.model", self.html)
         self.assertIn("apiKeyInput.value = profile.api_key", self.html)
+        self.assertIn("wireApiSelect.value = normalizeWireApi(profile.wire_api)", self.html)
         self.assertIn('profileSelect.addEventListener("change", () => {', self.html)
         self.assertIn('saveProfileButton.addEventListener("click", async () => {', self.html)
+
+    def test_runtime_model_selector_can_switch_model_in_chat_shell(self):
+        self.assertIn('id="model-display"', self.html)
+        self.assertNotIn('id="model-display" disabled', self.html)
+        self.assertIn("function renderModelDisplay()", self.html)
+        self.assertIn("function selectRuntimeModel(modelName)", self.html)
+        self.assertIn('modelDisplay.addEventListener("change", () => {', self.html)
+        self.assertIn("selectRuntimeModel(modelDisplay.value);", self.html)
 
 
 if __name__ == "__main__":

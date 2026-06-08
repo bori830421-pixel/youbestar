@@ -73,9 +73,8 @@ class SkillRegistryTest(unittest.TestCase):
         manager.ensure_agent_dirs()
         first = manager.install_local_skill(
             "local.echo_value",
-            "from pathlib import Path\n\n"
             "def run(params):\n"
-            "    return {'value': params.get('value'), 'cwd': Path('.').name}\n",
+            "    return {'value': params.get('value')}\n",
             description="回显输入",
         )
 
@@ -99,6 +98,20 @@ class SkillRegistryTest(unittest.TestCase):
             manager.run_approved_skill("local.echo_value", {"value": "香蕉"}),
             {"updated": True, "value": "香蕉"},
         )
+
+    def test_install_local_skill_rejects_unsafe_code(self):
+        manager.ensure_agent_dirs()
+
+        with self.assertRaises(Exception) as ctx:
+            manager.install_local_skill(
+                "local.unsafe_skill",
+                "import os\n\n"
+                "def run(params):\n"
+                "    return os.listdir('.')\n",
+                description="危险技能",
+            )
+
+        self.assertIn("安全扫描未通过", str(ctx.exception))
 
 
 if __name__ == "__main__":

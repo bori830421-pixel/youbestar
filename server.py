@@ -6,7 +6,8 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from agent_system.server import router as skills_router
+from agent_system.evolution_policy import is_self_evolution_enabled
+from agent_system.server import router as skills_router, self_evolution_router
 from core.agent_runtime import AgentRuntime
 from core.config import ModelConfig, load_config, save_config_file
 from core.llm import LLM
@@ -27,6 +28,7 @@ class ChatRequest(BaseModel):
     allowChat: bool = True
     allowTools: bool = True
     allowSkills: bool = True
+    allowSelfEvolution: bool = False
     threadId: str = Field(default="default", min_length=1, max_length=200)
 
 
@@ -49,6 +51,7 @@ class ConfigSaveResponse(BaseModel):
 class ModelDiscoveryRequest(BaseModel):
     api_url: str
     api_key: str
+    wire_api: str = "chat_completions"
 
 
 class ModelDiscoveryResponse(BaseModel):
@@ -80,6 +83,7 @@ app.add_middleware(
 )
 
 app.include_router(skills_router)
+app.include_router(self_evolution_router)
 
 
 def build_user_visible_reply(response: str, action: str, action_result: str) -> str:
@@ -92,6 +96,7 @@ def run_legacy_agent_loop(
     allow_chat: bool,
     allow_tools: bool = True,
     allow_skills: bool = True,
+    allow_self_evolution: bool = False,
 ) -> ChatResponse:
     model_reply, thought, action, params, action_result, user_response = agent_loop(
         llm,
@@ -100,6 +105,7 @@ def run_legacy_agent_loop(
         allow_chat,
         allow_tools=allow_tools,
         allow_skills=allow_skills,
+        allow_self_evolution=allow_self_evolution,
     )
     return ChatResponse(
         reply=build_user_visible_reply(user_response, action, action_result),
@@ -118,6 +124,7 @@ def run_agent_runtime(
     allow_chat: bool,
     allow_tools: bool = True,
     allow_skills: bool = True,
+    allow_self_evolution: bool = False,
     thread_id: str = "default",
 ) -> ChatResponse:
     result = agent_runtime.run(
@@ -127,6 +134,7 @@ def run_agent_runtime(
         allow_chat=allow_chat,
         allow_tools=allow_tools,
         allow_skills=allow_skills,
+        allow_self_evolution=allow_self_evolution,
         thread_id=thread_id,
     )
     memory_candidate = memory.detect_business_memory_candidate(
@@ -213,6 +221,7 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     try:
         llm = LLM(load_config())
+        allow_self_evolution = request.allowSelfEvolution and is_self_evolution_enabled()
         if USE_AGENT_RUNTIME:
             return run_agent_runtime(
                 llm,
@@ -220,6 +229,7 @@ def chat(request: ChatRequest) -> ChatResponse:
                 request.allowChat,
                 allow_tools=request.allowTools,
                 allow_skills=request.allowSkills,
+                allow_self_evolution=allow_self_evolution,
                 thread_id=request.threadId,
             )
         return run_legacy_agent_loop(
@@ -228,6 +238,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             request.allowChat,
             allow_tools=request.allowTools,
             allow_skills=request.allowSkills,
+            allow_self_evolution=allow_self_evolution,
         )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail=f"Model API request failed: {exc}") from exc
