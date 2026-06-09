@@ -6,5 +6,7 @@ __pycache__/
 
 youbestar.json
 data/
+youbestar_local_*_bundle_*/
+youbestar_local_*_bundle_*.zip
 agent_system/self_evolution_settings.json
 

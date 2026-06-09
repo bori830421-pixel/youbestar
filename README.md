@@ -43,24 +43,25 @@ http://127.0.0.1:8000/
 
 Youbestar 的本地智能体资产主要在这些位置：
 
-- 本地技能：`agent_system\skills\local`
-- 技能注册表：`agent_system\skills\registry.json`
-- 本地知识库/业务资料库：`data`
+- 本地运行目录：`D:\YoubestarLocal`
+- 本地技能：`D:\YoubestarLocal\skills\local`
+- 本地技能注册表：`D:\YoubestarLocal\registries\local.registry.json`
+- 本地知识库/业务资料库：`D:\YoubestarLocal\data`
 
-如果公司电脑和家里电脑不通过 GitHub 同步本地技能和知识库，可以用两个脚本手动迁移：
+项目根目录只保留程序代码和 official registry；`local.*` 技能、数据库、导入备份和同步包都不再提交到 GitHub。公司电脑和家里电脑同步时，优先打包或复制 `D:\YoubestarLocal`。
 
 ```bat
 pack_youbestar_local_skills.bat
 inject_youbestar_local_skills.bat
 ```
 
-`pack_youbestar_local_skills.bat` 会把本地技能、`local.*` 注册信息、技能开关、`tools` 支撑代码、`data` 知识库以及这两个迁移脚本一起打包成 `youbestar_local_skills_bundle_时间.zip`。脚本放在哪个文件夹都能运行；不传参数时，包输出到脚本所在目录。打包完成后会自动打开输出文件夹并选中压缩包。
+`pack_youbestar_local_skills.bat` 会从 `D:\YoubestarLocal` 打包本地技能、`local.*` 注册信息、技能开关和 `data` 知识库，生成 `youbestar_local_skills_bundle_时间.zip`。脚本放在哪个文件夹都能运行；不传参数时，包输出到脚本所在目录。打包完成后会自动打开输出文件夹并选中压缩包。
 
 ```bat
 pack_youbestar_local_skills.bat D:\我的备份包
 ```
 
-`inject_youbestar_local_skills.bat` 会把打包文件注入当前电脑的 Youbestar 项目，合并 `local.*` 技能注册表，并在注入前自动备份被覆盖的本地资产到 `agent_system\import_backups\时间`。
+`inject_youbestar_local_skills.bat` 会让你选择当前电脑的 Youbestar 项目根目录，然后把打包文件注入 `D:\YoubestarLocal`，合并 `local.*` 技能注册表，并在注入前自动备份被覆盖的本地资产到 `D:\YoubestarLocal\backups\import_时间`。
 
 ```bat
 inject_youbestar_local_skills.bat D:\我的备份包\youbestar_local_skills_bundle_20260609_011910.zip
@@ -72,7 +73,7 @@ inject_youbestar_local_skills.bat D:\我的备份包\youbestar_local_skills_bund
 inject_youbestar_local_skills.bat D:\我的备份包\bundle.zip D:\codex_projects\youbestar
 ```
 
-打包会排除 `youbestar.json`、`.env`、`.git`、`.venv` 和名字命中 token/cookie/credential/secret/password/api_key/auth 的文件。由于包里包含你的知识库和业务数据，请只放在可信的私有位置。
+打包会排除 `youbestar.json`、`.env`、`.git`、`.venv`、缓存目录和名字命中 token/cookie/credential/secret/password/api_key/auth 的文件。由于包里包含你的知识库和业务数据，请只放在可信的私有位置。
 
 ## 模型配置
 
@@ -385,7 +386,7 @@ official.query_weather
 模型写代码 -> agent_system/sandbox/
 模型写测试 -> agent_system/tests/
 测试通过 -> 提交审批
-人工批准 -> agent_system/skills/local/
+人工批准 -> D:\YoubestarLocal\skills\local/
 写入 registry.json
 Agent 才能调用
 ```

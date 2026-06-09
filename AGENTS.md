@@ -4,6 +4,14 @@
 
 If command execution fails with `CreateProcessAsUserW failed: 1920`, treat it as a Windows sandbox/process-launch issue. Do not modify business code. Re-run the exact failed command with elevated permission and only re-run the failed command.
 
+## Windows BAT / PowerShell JSON
+
+When BAT-embedded PowerShell writes project JSON, use UTF-8 without BOM (for example `[System.IO.File]::WriteAllText(..., [System.Text.UTF8Encoding]::new($false))`). Windows PowerShell `Set-Content -Encoding UTF8` writes a BOM that breaks Python `json.loads(path.read_text(encoding="utf-8"))`.
+
+## Local runtime assets
+
+Keep local skills, local skill registry/settings, databases, imports, backups, logs, and sync bundles under `D:\YoubestarLocal` by default. The project root should keep program code and official registry only; `local.*` skills are loaded from `D:\YoubestarLocal\skills\local` with registry data in `D:\YoubestarLocal\registries`.
+
 ## Token-saving workflow
 
 For non-trivial work:

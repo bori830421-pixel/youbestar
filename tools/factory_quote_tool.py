@@ -11,9 +11,11 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
 
+from core.local_runtime import local_data_dir
+
 
 DEFAULT_SOURCE_PATH = Path(r"D:\工厂报价")
-DATA_DIR = Path("data")
+DATA_DIR = local_data_dir()
 DEFAULT_LIBRARY_PATH = DATA_DIR / "factory_quotes.sqlite3"
 IMAGE_TYPE_SKU = "sku_image"
 IMAGE_TYPE_REAL = "real_photo"

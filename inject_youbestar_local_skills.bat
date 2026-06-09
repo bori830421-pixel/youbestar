@@ -22,6 +22,7 @@ $DeniedDirs = @(
     "runtime"
 )
 $DeniedFileRegex = "(?i)(^\.env|^youbestar\.json$|token|cookie|credential|secret|password|passwd|private[_-]?key|api[_-]?key|auth)"
+$DefaultLocalRuntimeRoot = "D:\YoubestarLocal"
 
 function Test-ProjectRoot {
     param([string]$Path)
@@ -58,6 +59,27 @@ function Search-UpForProject {
     return $null
 }
 
+function Select-YoubestarProjectRoot {
+    param([string]$InitialDirectory)
+    $message = "Select the Youbestar project root folder. It must contain server.py and agent_system\skills\registry.json."
+
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.BrowseForFolder(0, $message, 0, $InitialDirectory)
+        if ($null -ne $folder) {
+            return $folder.Self.Path
+        }
+    } catch {
+        Write-Warning "Folder picker failed: $($_.Exception.Message)"
+    }
+
+    $typedPath = Read-Host "Enter Youbestar project root path, or press Enter to cancel"
+    if ([string]::IsNullOrWhiteSpace($typedPath)) {
+        throw "Project root selection cancelled."
+    }
+    return $typedPath
+}
+
 function Resolve-YoubestarProject {
     $starts = New-Object System.Collections.Generic.List[string]
     if (-not [string]::IsNullOrWhiteSpace($env:PROJECT_ROOT_ARG)) {
@@ -65,12 +87,6 @@ function Resolve-YoubestarProject {
     }
     if (-not [string]::IsNullOrWhiteSpace($env:YOUBESTAR_HOME)) {
         $starts.Add($env:YOUBESTAR_HOME)
-    }
-    $starts.Add((Get-Location).Path)
-    $starts.Add($env:BAT_DIR)
-    $starts.Add("D:\codex_projects\youbestar")
-    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
-        $starts.Add((Join-Path $env:USERPROFILE "codex_projects\youbestar"))
     }
 
     $seen = @{}
@@ -89,7 +105,18 @@ function Resolve-YoubestarProject {
         }
     }
 
-    throw "Cannot find Youbestar project. Set YOUBESTAR_HOME or pass project root as the second argument."
+    $initialDirectory = Search-UpForProject (Get-Location).Path
+    if ([string]::IsNullOrWhiteSpace($initialDirectory)) {
+        $initialDirectory = (Get-Location).Path
+    }
+
+    $selected = Select-YoubestarProjectRoot $initialDirectory
+    $foundSelected = Search-UpForProject $selected
+    if ($null -ne $foundSelected) {
+        return $foundSelected
+    }
+
+    throw "Selected path is not a Youbestar project root. Choose the folder that contains server.py and agent_system\skills\registry.json."
 }
 
 function Test-SkipItem {
@@ -113,6 +140,23 @@ function Test-SkipItem {
     return $false
 }
 
+function Resolve-LocalRuntimeRoot {
+    if (-not [string]::IsNullOrWhiteSpace($env:YOUBESTAR_LOCAL_HOME)) {
+        return [System.IO.Path]::GetFullPath($env:YOUBESTAR_LOCAL_HOME)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:YOUBESTAR_LOCAL_DIR)) {
+        return [System.IO.Path]::GetFullPath($env:YOUBESTAR_LOCAL_DIR)
+    }
+    return [System.IO.Path]::GetFullPath($DefaultLocalRuntimeRoot)
+}
+
+function Ensure-LocalRuntime {
+    param([string]$Root)
+    foreach ($relative in @("", "data", "skills\local", "registries", "imports", "backups", "logs")) {
+        New-Item -ItemType Directory -Force -Path (Join-Path $Root $relative) | Out-Null
+    }
+}
+
 function Copy-FilteredTree {
     param(
         [string]$Source,
@@ -123,6 +167,10 @@ function Copy-FilteredTree {
     }
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     $sourceFull = (Resolve-Path -LiteralPath $Source).Path.TrimEnd([char[]]@("\", "/"))
+    $destinationFull = [System.IO.Path]::GetFullPath($Destination).TrimEnd([char[]]@("\", "/"))
+    if ($sourceFull.Equals($destinationFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
     Get-ChildItem -LiteralPath $sourceFull -Recurse -Force | ForEach-Object {
         if (Test-SkipItem $_) {
             return
@@ -155,18 +203,32 @@ function Read-JsonObject {
     return $result
 }
 
+function Write-Utf8NoBom {
+    param(
+        [string]$Path,
+        [string]$Content
+    )
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
 function Write-JsonObject {
     param(
         [object]$Value,
         [string]$Path
     )
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
-    $Value | ConvertTo-Json -Depth 80 | Set-Content -LiteralPath $Path -Encoding UTF8
+    $json = $Value | ConvertTo-Json -Depth 80
+    Write-Utf8NoBom -Path $Path -Content ($json + [Environment]::NewLine)
 }
 
 function Find-ManifestRoot {
     param([string]$Root)
     if (Test-Path -LiteralPath (Join-Path $Root "manifest.json")) {
+        return $Root
+    }
+    if ((Test-Path -LiteralPath (Join-Path $Root "registries\local.registry.json")) -or
+        (Test-Path -LiteralPath (Join-Path $Root "agent_system\skills\registry.local.json"))) {
         return $Root
     }
     $manifest = Get-ChildItem -LiteralPath $Root -Filter "manifest.json" -Recurse -File -ErrorAction SilentlyContinue |
@@ -191,6 +253,9 @@ function Resolve-Bundle {
         foreach ($root in @($env:BAT_DIR, (Get-Location).Path)) {
             if ([string]::IsNullOrWhiteSpace($root) -or -not (Test-Path -LiteralPath $root)) {
                 continue
+            }
+            if (Test-Path -LiteralPath (Join-Path $root "manifest.json")) {
+                return $root
             }
             Get-ChildItem -LiteralPath $root -Directory -Filter "youbestar_local_skills_bundle*" -ErrorAction SilentlyContinue |
                 ForEach-Object { $candidates.Add($_) }
@@ -224,21 +289,79 @@ function Resolve-Bundle {
     return $folderRoot
 }
 
+function First-ExistingPath {
+    param([string[]]$Paths)
+    foreach ($path in $Paths) {
+        if (-not [string]::IsNullOrWhiteSpace($path) -and (Test-Path -LiteralPath $path)) {
+            return $path
+        }
+    }
+    return $null
+}
+
+function Copy-FirstExistingTree {
+    param(
+        [string[]]$Sources,
+        [string]$Destination
+    )
+    $source = First-ExistingPath $Sources
+    if ($null -ne $source) {
+        Copy-FilteredTree $source $Destination
+    }
+}
+
+function ConvertTo-LocalRuntimeSkillPath {
+    param(
+        [string]$SkillName,
+        [object]$Record
+    )
+    $simpleName = ($SkillName.Split(".") | Select-Object -Last 1) + ".py"
+    $rawPath = ""
+    if ($null -ne $Record -and $null -ne $Record.PSObject.Properties["path"]) {
+        $rawPath = [string]$Record.path
+    }
+    $path = $rawPath.Replace("\", "/")
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        return "skills/local/$simpleName"
+    }
+    if ($path.StartsWith("skills/local/", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $path
+    }
+    if ($path.StartsWith("agent_system/skills/local/", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "skills/local/" + $path.Substring("agent_system/skills/local/".Length)
+    }
+    if ([System.IO.Path]::IsPathRooted($rawPath)) {
+        return "skills/local/" + [System.IO.Path]::GetFileName($rawPath)
+    }
+    return $path
+}
+
+function Copy-JsonRecord {
+    param([object]$Record)
+    $result = [ordered]@{}
+    if ($null -ne $Record) {
+        foreach ($prop in $Record.PSObject.Properties) {
+            $result[$prop.Name] = $prop.Value
+        }
+    }
+    return $result
+}
+
 $projectRoot = Resolve-YoubestarProject
 $bundleRoot = Resolve-Bundle
+$localRuntimeRoot = Resolve-LocalRuntimeRoot
+Ensure-LocalRuntime $localRuntimeRoot
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$backupRoot = Join-Path $projectRoot ("agent_system\import_backups\" + $stamp)
+$backupRoot = Join-Path $localRuntimeRoot ("backups\import_" + $stamp)
 New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
 
 $backupItems = @(
-    "agent_system\skills\local",
-    "agent_system\skills\registry.json",
-    "agent_system\skill_settings.json",
-    "tools",
+    "skills\local",
+    "registries",
     "data"
 )
 foreach ($item in $backupItems) {
-    $source = Join-Path $projectRoot $item
+    $source = Join-Path $localRuntimeRoot $item
     if (Test-Path -LiteralPath $source) {
         $dest = Join-Path $backupRoot $item
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
@@ -246,23 +369,48 @@ foreach ($item in $backupItems) {
     }
 }
 
-Copy-FilteredTree (Join-Path $bundleRoot "agent_system\skills\local") (Join-Path $projectRoot "agent_system\skills\local")
-Copy-FilteredTree (Join-Path $bundleRoot "tools") (Join-Path $projectRoot "tools")
-Copy-FilteredTree (Join-Path $bundleRoot "data") (Join-Path $projectRoot "data")
+Copy-FirstExistingTree @(
+    (Join-Path $bundleRoot "skills\local"),
+    (Join-Path $bundleRoot "agent_system\skills\local")
+) (Join-Path $localRuntimeRoot "skills\local")
+Copy-FirstExistingTree @(
+    (Join-Path $bundleRoot "data")
+) (Join-Path $localRuntimeRoot "data")
 
-$targetRegistryPath = Join-Path $projectRoot "agent_system\skills\registry.json"
+Copy-Item -LiteralPath $env:BAT_PATH -Destination (Join-Path $localRuntimeRoot "inject_youbestar_local_skills.bat") -Force
+$packScript = First-ExistingPath @(
+    (Join-Path $bundleRoot "pack_youbestar_local_skills.bat"),
+    (Join-Path $projectRoot "pack_youbestar_local_skills.bat"),
+    (Join-Path $env:BAT_DIR "pack_youbestar_local_skills.bat")
+)
+if ($null -ne $packScript) {
+    Copy-Item -LiteralPath $packScript -Destination (Join-Path $localRuntimeRoot "pack_youbestar_local_skills.bat") -Force
+}
+
+$targetRegistryPath = Join-Path $localRuntimeRoot "registries\local.registry.json"
 $targetRegistry = Read-JsonObject $targetRegistryPath
-$incomingRegistry = Read-JsonObject (Join-Path $bundleRoot "agent_system\skills\registry.local.json")
+$incomingRegistryPath = First-ExistingPath @(
+    (Join-Path $bundleRoot "registries\local.registry.json"),
+    (Join-Path $bundleRoot "agent_system\skills\registry.local.json")
+)
+$incomingRegistry = Read-JsonObject $incomingRegistryPath
 foreach ($key in $incomingRegistry.Keys) {
     if ($key.StartsWith("local.")) {
-        $targetRegistry[$key] = $incomingRegistry[$key]
+        $record = Copy-JsonRecord $incomingRegistry[$key]
+        $record["source"] = "local"
+        $record["path"] = ConvertTo-LocalRuntimeSkillPath $key $incomingRegistry[$key]
+        $targetRegistry[$key] = $record
     }
 }
 Write-JsonObject $targetRegistry $targetRegistryPath
 
-$targetSettingsPath = Join-Path $projectRoot "agent_system\skill_settings.json"
+$targetSettingsPath = Join-Path $localRuntimeRoot "registries\skill_settings.local.json"
 $targetSettings = Read-JsonObject $targetSettingsPath
-$incomingSettings = Read-JsonObject (Join-Path $bundleRoot "agent_system\skill_settings.local.json")
+$incomingSettingsPath = First-ExistingPath @(
+    (Join-Path $bundleRoot "registries\skill_settings.local.json"),
+    (Join-Path $bundleRoot "agent_system\skill_settings.local.json")
+)
+$incomingSettings = Read-JsonObject $incomingSettingsPath
 foreach ($key in $incomingSettings.Keys) {
     if ($key.StartsWith("local.")) {
         $targetSettings[$key] = $incomingSettings[$key]
@@ -272,8 +420,9 @@ Write-JsonObject $targetSettings $targetSettingsPath
 
 Write-Host ""
 Write-Host "Youbestar local agent bundle injected."
-Write-Host "Project: $projectRoot"
-Write-Host "Bundle : $bundleRoot"
-Write-Host "Backup : $backupRoot"
+Write-Host "Project      : $projectRoot"
+Write-Host "Local runtime: $localRuntimeRoot"
+Write-Host "Bundle       : $bundleRoot"
+Write-Host "Backup       : $backupRoot"
 Write-Host ""
 Write-Host "Restart Youbestar if it is already running, then open the Skills page to confirm local skills."

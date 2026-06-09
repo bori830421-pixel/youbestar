@@ -22,6 +22,7 @@ $DeniedDirs = @(
     "runtime"
 )
 $DeniedFileRegex = "(?i)(^\.env|^youbestar\.json$|token|cookie|credential|secret|password|passwd|private[_-]?key|api[_-]?key|auth)"
+$DefaultLocalRuntimeRoot = "D:\YoubestarLocal"
 
 function Test-ProjectRoot {
     param([string]$Path)
@@ -102,6 +103,23 @@ function Resolve-OutputRoot {
     return [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $env:PACK_DEST))
 }
 
+function Resolve-LocalRuntimeRoot {
+    if (-not [string]::IsNullOrWhiteSpace($env:YOUBESTAR_LOCAL_HOME)) {
+        return [System.IO.Path]::GetFullPath($env:YOUBESTAR_LOCAL_HOME)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:YOUBESTAR_LOCAL_DIR)) {
+        return [System.IO.Path]::GetFullPath($env:YOUBESTAR_LOCAL_DIR)
+    }
+    return [System.IO.Path]::GetFullPath($DefaultLocalRuntimeRoot)
+}
+
+function Ensure-LocalRuntime {
+    param([string]$Root)
+    foreach ($relative in @("", "data", "skills\local", "registries", "imports", "backups", "logs")) {
+        New-Item -ItemType Directory -Force -Path (Join-Path $Root $relative) | Out-Null
+    }
+}
+
 function Test-SkipItem {
     param([System.IO.FileSystemInfo]$Item)
     $parts = $Item.FullName -split "[\\/]"
@@ -165,16 +183,28 @@ function Read-JsonObject {
     return $result
 }
 
+function Write-Utf8NoBom {
+    param(
+        [string]$Path,
+        [string]$Content
+    )
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $encoding)
+}
+
 function Write-JsonObject {
     param(
         [object]$Value,
         [string]$Path
     )
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Path) | Out-Null
-    $Value | ConvertTo-Json -Depth 80 | Set-Content -LiteralPath $Path -Encoding UTF8
+    $json = $Value | ConvertTo-Json -Depth 80
+    Write-Utf8NoBom -Path $Path -Content ($json + [Environment]::NewLine)
 }
 
 $projectRoot = Resolve-YoubestarProject
+$localRuntimeRoot = Resolve-LocalRuntimeRoot
+Ensure-LocalRuntime $localRuntimeRoot
 $outputRoot = Resolve-OutputRoot
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $bundleName = "youbestar_local_skills_bundle_$stamp"
@@ -183,9 +213,9 @@ $zipPath = "$bundleDir.zip"
 
 New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
 
-Copy-FilteredTree (Join-Path $projectRoot "agent_system\skills\local") (Join-Path $bundleDir "agent_system\skills\local")
-Copy-FilteredTree (Join-Path $projectRoot "tools") (Join-Path $bundleDir "tools")
-Copy-FilteredTree (Join-Path $projectRoot "data") (Join-Path $bundleDir "data")
+Copy-FilteredTree (Join-Path $localRuntimeRoot "skills\local") (Join-Path $bundleDir "skills\local")
+Copy-FilteredTree (Join-Path $localRuntimeRoot "data") (Join-Path $bundleDir "data")
+Copy-FilteredTree (Join-Path $localRuntimeRoot "registries") (Join-Path $bundleDir "registries")
 
 $packScript = Join-Path $projectRoot "pack_youbestar_local_skills.bat"
 $injectScript = Join-Path $projectRoot "inject_youbestar_local_skills.bat"
@@ -196,39 +226,23 @@ if (Test-Path -LiteralPath $injectScript) {
     Copy-Item -LiteralPath $injectScript -Destination (Join-Path $bundleDir "inject_youbestar_local_skills.bat") -Force
 }
 
-$registry = Read-JsonObject (Join-Path $projectRoot "agent_system\skills\registry.json")
-$localRegistry = [ordered]@{}
-foreach ($key in $registry.Keys) {
-    $record = $registry[$key]
-    $source = ""
-    if ($null -ne $record -and $null -ne $record.PSObject.Properties["source"]) {
-        $source = [string]$record.source
-    }
-    if ($key.StartsWith("local.") -or $source -eq "local") {
-        $localRegistry[$key] = $record
-    }
+if (-not (Test-Path -LiteralPath (Join-Path $bundleDir "registries\local.registry.json"))) {
+    Write-JsonObject ([ordered]@{}) (Join-Path $bundleDir "registries\local.registry.json")
 }
-Write-JsonObject $localRegistry (Join-Path $bundleDir "agent_system\skills\registry.local.json")
-
-$settings = Read-JsonObject (Join-Path $projectRoot "agent_system\skill_settings.json")
-$localSettings = [ordered]@{}
-foreach ($key in $settings.Keys) {
-    if ($key.StartsWith("local.")) {
-        $localSettings[$key] = $settings[$key]
-    }
+if (-not (Test-Path -LiteralPath (Join-Path $bundleDir "registries\skill_settings.local.json"))) {
+    Write-JsonObject ([ordered]@{}) (Join-Path $bundleDir "registries\skill_settings.local.json")
 }
-Write-JsonObject $localSettings (Join-Path $bundleDir "agent_system\skill_settings.local.json")
 
 $manifest = [ordered]@{
     package = "youbestar_local_skills_bundle"
     version = 1
     created_at = (Get-Date).ToString("s")
     source_project = $projectRoot
+    local_runtime = $localRuntimeRoot
     includes = @(
-        "agent_system\skills\local",
-        "agent_system\skills\registry.local.json",
-        "agent_system\skill_settings.local.json",
-        "tools",
+        "skills\local",
+        "registries\local.registry.json",
+        "registries\skill_settings.local.json",
         "data",
         "pack_youbestar_local_skills.bat",
         "inject_youbestar_local_skills.bat"
@@ -251,9 +265,10 @@ Compress-Archive -Path (Join-Path $bundleDir "*") -DestinationPath $zipPath -For
 
 Write-Host ""
 Write-Host "Youbestar local agent bundle created."
-Write-Host "Project : $projectRoot"
-Write-Host "Folder  : $bundleDir"
-Write-Host "Zip     : $zipPath"
+Write-Host "Project      : $projectRoot"
+Write-Host "Local runtime: $localRuntimeRoot"
+Write-Host "Folder       : $bundleDir"
+Write-Host "Zip          : $zipPath"
 Write-Host ""
 Write-Host "Keep this package private. It includes local skills and data knowledge, but excludes config secrets."
 Start-Process explorer.exe -ArgumentList "/select,`"$zipPath`""

@@ -10,6 +10,15 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from core.local_runtime import (
+    ensure_local_runtime_dirs,
+    is_inside,
+    local_runtime_dir,
+    local_runtime_record_path,
+    local_skill_registry_file,
+    local_skill_source_dir,
+)
+
 
 AGENT_SYSTEM_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = AGENT_SYSTEM_DIR.parent
@@ -72,11 +81,11 @@ def ensure_agent_dirs() -> None:
         SKILLS_DIR,
         SKILLS_DIR / "official",
         SKILLS_DIR / "community",
-        SKILLS_DIR / "local",
         SANDBOX_DIR,
         TESTS_DIR,
     ):
         path.mkdir(parents=True, exist_ok=True)
+    ensure_local_runtime_dirs()
     if not APPROVALS_FILE.exists():
         APPROVALS_FILE.write_text("[]", encoding="utf-8")
     if not REGISTRY_FILE.exists():
@@ -96,6 +105,16 @@ def to_relative(path: Path) -> str:
     raise ValueError(f"{path} is not inside {PROJECT_ROOT}")
 
 
+def to_record_path(path: Path, source: str) -> str:
+    if source == "local":
+        return local_runtime_record_path(path)
+    return to_relative(path)
+
+
+def _registry_for_source(source: str) -> Path:
+    return local_skill_registry_file() if source == "local" else REGISTRY_FILE
+
+
 def validate_skill_name(skill_name: str) -> str:
     clean_name = skill_name.strip()
     if not SAFE_SKILL_NAME_RE.fullmatch(clean_name):
@@ -106,6 +125,8 @@ def validate_skill_name(skill_name: str) -> str:
 def skill_source_dir(source: str) -> Path:
     if source not in SKILL_SOURCES:
         raise HTTPException(status_code=400, detail="技能来源只能是 official、community 或 local。")
+    if source == "local":
+        return local_skill_source_dir()
     return SKILLS_DIR / source
 
 
@@ -222,40 +243,66 @@ def read_json_file(path: Path, fallback: Any) -> Any:
 
 
 def write_json_file(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def load_skill_registry() -> dict[str, dict[str, Any]]:
-    ensure_agent_dirs()
-    registry = read_json_file(REGISTRY_FILE, {})
+def _load_raw_registry_file(path: Path) -> dict[str, Any]:
+    registry = read_json_file(path, {})
     if not isinstance(registry, dict):
-        raise HTTPException(status_code=500, detail="registry.json 必须是对象。")
+        raise HTTPException(status_code=500, detail=f"{path.name} 必须是对象。")
+    return registry
 
+
+def _clean_registry_records(registry: dict[str, Any], registry_name: str) -> dict[str, dict[str, Any]]:
     clean_registry: dict[str, dict[str, Any]] = {}
     for skill_id, record in registry.items():
         clean_id = validate_skill_id(str(skill_id))
         if not isinstance(record, dict):
-            raise HTTPException(status_code=500, detail=f"registry.json 中 {clean_id} 必须是对象。")
+            raise HTTPException(status_code=500, detail=f"{registry_name} 中 {clean_id} 必须是对象。")
         source = str(record.get("source") or skill_source(clean_id))
         if source != skill_source(clean_id):
-            raise HTTPException(status_code=500, detail=f"registry.json 中 {clean_id} 的 source 与命名空间不一致。")
+            raise HTTPException(status_code=500, detail=f"{registry_name} 中 {clean_id} 的 source 与命名空间不一致。")
         clean_registry[clean_id] = record
+    return clean_registry
+
+
+def load_skill_registry() -> dict[str, dict[str, Any]]:
+    ensure_agent_dirs()
+    clean_registry = _clean_registry_records(_load_raw_registry_file(REGISTRY_FILE), "registry.json")
+    local_registry = _clean_registry_records(_load_raw_registry_file(local_skill_registry_file()), "local.registry.json")
+    clean_registry.update(local_registry)
     return clean_registry
 
 
 def save_skill_registry(registry: dict[str, dict[str, Any]]) -> None:
     ensure_agent_dirs()
-    write_json_file(REGISTRY_FILE, registry)
+    project_registry = {name: record for name, record in registry.items() if skill_source(name) != "local"}
+    local_registry = {name: record for name, record in registry.items() if skill_source(name) == "local"}
+    write_json_file(REGISTRY_FILE, project_registry)
+    write_json_file(local_skill_registry_file(), local_registry)
 
 
 def resolve_registered_skill_path(record: dict[str, Any]) -> Path:
     raw_path = Path(str(record.get("path", "")))
-    candidate = raw_path if raw_path.is_absolute() else PROJECT_ROOT / raw_path
-    resolved = candidate.resolve()
     source = str(record.get("source", ""))
+    if raw_path.is_absolute():
+        candidate = raw_path
+    elif source == "local":
+        candidate = local_runtime_dir() / raw_path
+        legacy_candidate = PROJECT_ROOT / raw_path
+        if not candidate.exists() and legacy_candidate.exists():
+            candidate = legacy_candidate
+    else:
+        candidate = PROJECT_ROOT / raw_path
+    resolved = candidate.resolve()
     base = skill_source_dir(source).resolve()
+    legacy_base = (PROJECT_ROOT / "agent_system" / "skills" / "local").resolve()
+    if source == "local" and is_inside(resolved, legacy_base):
+        return resolved
     if resolved != base and base not in resolved.parents:
-        raise HTTPException(status_code=400, detail=f"技能文件必须位于 {to_relative(skill_source_dir(source))} 内。")
+        base_label = str(base) if source == "local" else to_relative(skill_source_dir(source))
+        raise HTTPException(status_code=400, detail=f"技能文件必须位于 {base_label} 内。")
     return resolved
 
 
@@ -278,16 +325,17 @@ def register_skill(
     skill_path = Path(path).resolve()
     base = skill_source_dir(clean_source).resolve()
     if skill_path != base and base not in skill_path.parents:
-        raise HTTPException(status_code=400, detail=f"技能文件必须位于 {to_relative(skill_source_dir(clean_source))} 内。")
+        base_label = str(base) if clean_source == "local" else to_relative(skill_source_dir(clean_source))
+        raise HTTPException(status_code=400, detail=f"技能文件必须位于 {base_label} 内。")
     if not skill_path.exists():
         raise HTTPException(status_code=404, detail="技能文件不存在，不能注册。")
 
     if clean_source == "community":
         assert_code_safe(skill_path.read_text(encoding="utf-8"))
 
-    registry = load_skill_registry()
+    registry = _clean_registry_records(_load_raw_registry_file(_registry_for_source(clean_source)), _registry_for_source(clean_source).name)
     record = {
-        "path": to_relative(skill_path),
+        "path": to_record_path(skill_path, clean_source),
         "version": version.strip() or "dev",
         "source": clean_source,
         "description": description.strip(),
@@ -296,7 +344,7 @@ def register_skill(
         "updated_at": utc_now(),
     }
     registry[skill_id] = record
-    save_skill_registry(registry)
+    write_json_file(_registry_for_source(clean_source), registry)
     return record
 
 
@@ -502,7 +550,7 @@ def approve_skill(skill_name: str, file: str | None = None, reviewer: str = "ope
     )
 
     record["status"] = "approved"
-    record["approved_file"] = to_relative(approved_path)
+    record["approved_file"] = to_record_path(approved_path, "local")
     record["reviewed_at"] = utc_now()
     record["reviewer"] = reviewer.strip() or "operator"
     record["review_note"] = note.strip()

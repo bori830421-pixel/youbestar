@@ -5,9 +5,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from core.local_runtime import local_data_dir
+
 
 SHORT_TERM_LIMIT = 50
-DEFAULT_STORAGE_PATH = Path("data") / "memory_long_term.json"
+DEFAULT_STORAGE_PATH = local_data_dir() / "memory_long_term.json"
 BUSINESS_MEMORY_TYPES = {
     "customer",
     "sku",

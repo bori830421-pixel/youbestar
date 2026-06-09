@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from agent_system.manager import load_skill_registry, normalize_skill_id
+from core.local_runtime import local_skill_settings_file
 
 
 SETTINGS_FILE = Path(__file__).with_name("skill_settings.json")
@@ -98,21 +99,33 @@ def canonical_skill_name(skill_name: str) -> str:
 
 
 def load_skill_settings() -> dict[str, bool]:
+    settings: dict[str, bool] = {}
+    settings.update(_load_skill_settings_file(SETTINGS_FILE))
+    settings.update(_load_skill_settings_file(local_skill_settings_file()))
+    return settings
+
+
+def _load_skill_settings_file(path: Path) -> dict[str, bool]:
     try:
-        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=500, detail=f"skill_settings.json 不是有效 JSON：{exc}") from exc
+        raise HTTPException(status_code=500, detail=f"{path.name} 不是有效 JSON：{exc}") from exc
 
     if not isinstance(data, dict):
-        raise HTTPException(status_code=500, detail="skill_settings.json 必须是对象。")
+        raise HTTPException(status_code=500, detail=f"{path.name} 必须是对象。")
 
     return {canonical_skill_name(str(name)): bool(enabled) for name, enabled in data.items()}
 
 
 def save_skill_settings(settings: dict[str, bool]) -> None:
-    SETTINGS_FILE.write_text(json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8")
+    project_settings = {name: enabled for name, enabled in settings.items() if not name.startswith("local.")}
+    local_settings = {name: enabled for name, enabled in settings.items() if name.startswith("local.")}
+    SETTINGS_FILE.write_text(json.dumps(project_settings, ensure_ascii=False, indent=2), encoding="utf-8")
+    local_settings_file = local_skill_settings_file()
+    local_settings_file.parent.mkdir(parents=True, exist_ok=True)
+    local_settings_file.write_text(json.dumps(local_settings, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def known_skill_names() -> set[str]:
