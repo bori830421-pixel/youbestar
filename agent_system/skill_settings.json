@@ -2,6 +2,8 @@
   "official.open_browser": true,
   "official.web_query": true,
   "official.query_weather": true,
+  "official.preview_excel": true,
+  "official.reference_product": true,
   "official.install_local_skill": true,
   "official.write_project_file": true,
   "official.list_files": true,

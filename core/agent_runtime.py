@@ -56,7 +56,18 @@ class AgentRuntime:
         allow_skills: bool = True,
         allow_self_evolution: bool = False,
         thread_id: str = "default",
+        history: list[dict[str, str]] | None = None,
     ) -> AgentResult:
+        combined_history = list(memory.history)
+        if history:
+            combined_history.extend(
+                {
+                    "role": str(item.get("role") or ""),
+                    "content": str(item.get("content") or ""),
+                }
+                for item in history
+                if isinstance(item, dict) and item.get("content")
+            )
         state = AgentState(
             thread_id=thread_id.strip() or "default",
             user_input=user_input,
@@ -64,7 +75,7 @@ class AgentRuntime:
             allow_tools=allow_tools,
             allow_skills=allow_skills,
             allow_self_evolution=allow_self_evolution,
-            history=list(memory.history),
+            history=combined_history,
             runtime_started_at=time.monotonic(),
         )
         context = AgentContext(llm=llm, memory=memory)

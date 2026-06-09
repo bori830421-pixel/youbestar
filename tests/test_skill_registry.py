@@ -1,9 +1,18 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_system import manager
-from agent_system.skill_registry import canonical_skill_name
+from agent_system.skill_registry import BUILTIN_SKILLS, canonical_skill_name
+from core.local_runtime import (
+    ensure_local_runtime_dirs,
+    local_runtime_dir,
+    local_runtime_record_path,
+    local_skill_registry_file,
+    local_skill_source_dir,
+)
 
 
 class SkillRegistryTest(unittest.TestCase):
@@ -11,6 +20,9 @@ class SkillRegistryTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         self.agent_dir = self.root / "agent_system"
+        self.local_runtime_dir = self.root / "YoubestarLocal"
+        self.local_home_patch = patch.dict(os.environ, {"YOUBESTAR_LOCAL_HOME": str(self.local_runtime_dir)})
+        self.local_home_patch.start()
 
         self.original_paths = {
             "AGENT_SYSTEM_DIR": manager.AGENT_SYSTEM_DIR,
@@ -20,6 +32,11 @@ class SkillRegistryTest(unittest.TestCase):
             "TESTS_DIR": manager.TESTS_DIR,
             "APPROVALS_FILE": manager.APPROVALS_FILE,
             "REGISTRY_FILE": getattr(manager, "REGISTRY_FILE", None),
+            "ensure_local_runtime_dirs": manager.ensure_local_runtime_dirs,
+            "local_runtime_dir": manager.local_runtime_dir,
+            "local_runtime_record_path": manager.local_runtime_record_path,
+            "local_skill_registry_file": manager.local_skill_registry_file,
+            "local_skill_source_dir": manager.local_skill_source_dir,
         }
 
         manager.AGENT_SYSTEM_DIR = self.agent_dir
@@ -29,11 +46,17 @@ class SkillRegistryTest(unittest.TestCase):
         manager.TESTS_DIR = self.agent_dir / "tests"
         manager.APPROVALS_FILE = self.agent_dir / "approvals.json"
         manager.REGISTRY_FILE = manager.SKILLS_DIR / "registry.json"
+        manager.ensure_local_runtime_dirs = ensure_local_runtime_dirs
+        manager.local_runtime_dir = local_runtime_dir
+        manager.local_runtime_record_path = local_runtime_record_path
+        manager.local_skill_registry_file = local_skill_registry_file
+        manager.local_skill_source_dir = local_skill_source_dir
 
     def tearDown(self):
         for name, value in self.original_paths.items():
             if value is not None:
                 setattr(manager, name, value)
+        self.local_home_patch.stop()
         self.temp_dir.cleanup()
 
     def test_normalizes_plain_skill_names_to_local_namespace(self):
@@ -45,9 +68,19 @@ class SkillRegistryTest(unittest.TestCase):
             "community.user123.parse_order",
         )
 
+    def test_builtin_preview_excel_description_is_generic_classification_entry(self):
+        description = BUILTIN_SKILLS["official.preview_excel"]["description"]
+
+        self.assertIn("通用 Excel 表格处理分类系统入口", description)
+        self.assertIn("表头前几行", description)
+        self.assertIn("中文标准字段映射", description)
+        self.assertIn("未识别/ambiguous", description)
+        self.assertIn("待用户弹窗确认", description)
+        self.assertIn("不写数据库", description)
+
     def test_registers_and_runs_local_skill_from_registry(self):
         manager.ensure_agent_dirs()
-        skill_path = manager.SKILLS_DIR / "local" / "parse_order.py"
+        skill_path = manager.skill_source_dir("local") / "parse_order.py"
         skill_path.write_text(
             "def run(params):\n"
             "    return [{'name': params.get('text', ''), 'qty': 1}]\n",

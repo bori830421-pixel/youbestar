@@ -12,6 +12,14 @@ When BAT-embedded PowerShell writes project JSON, use UTF-8 without BOM (for exa
 
 Keep local skills, local skill registry/settings, databases, imports, backups, logs, and sync bundles under `D:\YoubestarLocal` by default. The project root should keep program code and official registry only; `local.*` skills are loaded from `D:\YoubestarLocal\skills\local` with registry data in `D:\YoubestarLocal\registries`.
 
+## Windows SQLite tests
+
+When tests create SQLite files under a temporary `YOUBESTAR_LOCAL_HOME`, close every `sqlite3.Connection` explicitly. `with sqlite3.connect(...) as connection` commits or rolls back the transaction but does not close the file handle, so Windows cleanup can fail with `PermissionError: [WinError 32]`.
+
+## LAN startup
+
+Use `start.bat` for local service startup. It must run the real FastAPI entrypoint with `uvicorn server:app`, open the service URL instead of a raw file or `python -m http.server`, print local/LAN access info, and keep the console open for logs. LAN sharing is an official Management Config capability, not the default startup mode: persist it in `D:\YoubestarLocal\config\service.json`; when enabled, `start.bat` starts with `--host 0.0.0.0`, otherwise it starts with `--host 127.0.0.1`. If the configured port is already in use, the startup script should show the owning process and ask whether to stop it before continuing.
+
 ## Token-saving workflow
 
 For non-trivial work:
@@ -146,8 +154,15 @@ Verified handling:
 - Search retry is capped: first search uses the original query, second search may use rewritten query candidates, and no third search is allowed.
 - Stock quote requests must use the official `official.query_market_data` skill. It uses the lightweight Eastmoney two-step flow from `tools/stock_tool.py`: search stock by Chinese name/code, then fetch real-time quote by `secid`. Do not reintroduce AkShare wrappers, `function/api` stock side routes, the old `local.query_market_data` path, or browser scraping for normal quote lookups.
 - Weather requests must use the official `official.query_weather` skill and local `tools/weather_tool.py` functions. Do not route weather, stock, or market quote requests to `official.web_query` or browser tools unless the user explicitly asks to search the web for related news/background.
+- Excel preview/classification requests must use `official.preview_excel` to read every worksheet, show header-leading rows, detected headers plus the first 20 rows, classify the table type, map headers to Chinese-labeled standard fields, and surface field-catalog proposals before any database import. Preserve header-leading rows because factory/contact metadata is often above the detected header row. Follow-up chat after drag-and-drop upload must include the saved Excel path and preview summary in history so questions like “表格前几行的厂家信息是什么” can be answered from the uploaded file context. Unknown or ambiguous sheets must be reported as `unknown`/`ambiguous` instead of forced into quote/order/inventory categories. Field-catalog additions, alias additions, or meaning changes may be proposed by Youbestar, but must wait for a user confirmation popup or explicit confirmation before taking effect. Only route to `local.factory_quote` with `operation="import"` when the user explicitly asks to write/import an Excel that has been confirmed as a quotation table into the quote library.
+- Excel quote imports must identify at least one business identity field before writing: `factory_name` or `brand`. If both are missing or ambiguous, return a confirmation-required result and do not write to SQLite. User-confirmed `factory_name`/`brand` values may be passed back into `local.factory_quote` import and then used for grouping, filtering, and product IDs.
+- When reading quote Excel with `factory_name` or `brand` params, treat params as user-confirmed fallback identity only when the sheet does not expose that identity; do not overwrite a detected full factory/brand name just because the user used a short name as a query filter.
+- Confirmed generic Excel mappings can be archived in `official.business_records` with `record_type="excel_table"`. This stores the confirmed mapping/table metadata in the shared business-records database; it does not replace quote-specific `local.factory_quote` imports. Business-records SQLite schema migration must add any missing legacy columns such as `content`, `fields_json`, and `search_text` before query/upsert.
+- 1688 reference-product requests must use the official `official.reference_product` skill. Capture is lightweight: store SKU names, source SKU ids, cost/reference prices, stock, source URL, and remote image URLs in `D:\YoubestarLocal\cache\reference_products`; do not download images or write the business records database during capture. Generate match candidates first, require explicit confirmation before `confirm_bind` writes image URL fields to product records, and only download/cache images when `export_excel` needs embedded pictures. Keep the reference-product cache capped by cleanup policy, defaulting to 500MB.
+- Dragging an Excel folder into the chat UI must recursively expand `DataTransfer.items` directory entries and upload every allowed Excel file through `/files/excel/preview`; keep a plain `DataTransfer.files` fallback for single-file drops and browsers without directory entries.
 - Local fast-path parsing must preserve user parameters: weather phrases such as `未来三天` / `未来5天` / `未来7天` must set `days` accordingly, and stock phrases such as `贵州茅台最新股价` or `601601最新收盘价` must strip query modifiers before passing `symbol`.
 - Chat mode is controlled by three independent switches: `allowChat`, `allowTools`, and `allowSkills`. If only `allowChat` is enabled, answer directly with the model and do not run tool/skill planning. `official.*` requires `allowTools`; `local.*` / `community.*` requires `allowSkills`.
+- Full Python test verification uses `.\.venv\Scripts\python.exe -m unittest discover -s tests`; plain `python -m unittest` currently discovers 0 tests.
 
 ## Sensitive local files
 

@@ -111,6 +111,95 @@ class UiFormatterTest(unittest.TestCase):
         self.assertNotIn(f"**{image}**", result)
         self.assertIn(f"SKU图：{image}", result)
 
+    def test_excel_preview_formats_every_sheet(self):
+        result = format_skill_result(
+            {
+                "ok": True,
+                "kind": "excel_preview",
+                "title": "Excel 读取预览",
+                "data": {
+                    "file_name": "quote.xlsx",
+                    "saved_path": r"D:\YoubestarLocal\imports\quote.xlsx",
+                    "sheets": [
+                        {
+                            "name": "报价表",
+                            "header_row": 2,
+                            "headers": ["货号", "品名"],
+                            "rows": [["QQL701A", "大盒五子棋"]],
+                            "preview_row_count": 1,
+                            "total_rows": 21,
+                            "total_columns": 2,
+                            "classification": {
+                                "status": "recognized",
+                                "category": "quote",
+                                "category_label": "报价表",
+                                "confidence": 0.98,
+                                "reasons": ["识别到报价表核心字段，分类证据较充分。"],
+                                "field_mappings": [
+                                    {
+                                        "source_header": "货号",
+                                        "standard_field": "product_code",
+                                        "standard_label": "商品编码",
+                                        "status": "mapped",
+                                    },
+                                    {
+                                        "source_header": "品名",
+                                        "standard_field": "product_name",
+                                        "standard_label": "商品名称",
+                                        "status": "mapped",
+                                    },
+                                ],
+                                "change_proposals": [],
+                            },
+                        },
+                        {
+                            "name": "联系人",
+                            "header_row": 1,
+                            "headers": ["工厂", "业务员"],
+                            "rows": [["潘多多", "潘小姐"]],
+                            "preview_row_count": 1,
+                            "total_rows": 2,
+                            "total_columns": 2,
+                            "classification": {
+                                "status": "unknown",
+                                "category": "",
+                                "category_label": "未识别",
+                                "confidence": 0,
+                                "reasons": ["表头与现有字段目录匹配度较低。"],
+                                "field_mappings": [
+                                    {
+                                        "source_header": "工厂",
+                                        "standard_field": "supplier_name",
+                                        "standard_label": "供应商名称",
+                                        "status": "mapped",
+                                    },
+                                    {
+                                        "source_header": "业务员",
+                                        "standard_field": "salesperson_name",
+                                        "standard_label": "业务员",
+                                        "status": "mapped",
+                                    },
+                                ],
+                                "change_proposals": [],
+                            },
+                        },
+                    ],
+                    "classification_summary": {
+                        "status_counts": {"recognized": 1, "partial": 0, "ambiguous": 0, "unknown": 1},
+                    },
+                },
+            }
+        )
+
+        self.assertIn("工作表：报价表", result)
+        self.assertIn("工作表：联系人", result)
+        self.assertIn("表格类型：**报价表**", result)
+        self.assertIn("表格类型：**未识别**", result)
+        self.assertIn("| 原始表头 | 标准字段 | 状态 |", result)
+        self.assertIn("| 货号 | 商品编码 / product_code | 已映射 |", result)
+        self.assertIn("| 货号 | 品名 |", result)
+        self.assertIn("| QQL701A | 大盒五子棋 |", result)
+
 
 if __name__ == "__main__":
     unittest.main()

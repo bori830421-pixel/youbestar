@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.ui_interactions import build_chat_interaction
 from core.ui_formatter import observation_to_text
 
 
@@ -55,12 +56,15 @@ class AgentResult:
     runtime_nodes: list[str]
     thread_id: str
     step_count: int
+    action_payload: Any = None
     intent: dict[str, Any] = field(default_factory=dict)
     answer_check: dict[str, Any] = field(default_factory=dict)
+    interactions: list[dict[str, Any]] = field(default_factory=list)
     stop_reason: str = ""
 
     @classmethod
     def from_state(cls, state: AgentState) -> "AgentResult":
+        interaction = build_chat_interaction(state.action, state.observation)
         return cls(
             reply=state.reply,
             model_reply=state.model_reply,
@@ -68,9 +72,11 @@ class AgentResult:
             action=state.action,
             params=state.params,
             action_result=observation_to_text(state.observation),
+            action_payload=state.observation if isinstance(state.observation, (dict, list)) else None,
             response=state.response,
             intent=dict(state.intent),
             answer_check=dict(state.answer_check),
+            interactions=[interaction] if interaction else [],
             stop_reason=state.stop_reason,
             runtime_nodes=list(state.runtime_nodes),
             thread_id=state.thread_id,

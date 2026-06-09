@@ -150,6 +150,9 @@ def format_skill_result(result: Any) -> str:
             return format_error(observation_to_text(result))
 
         title = str(result.get("title") or "执行结果")
+        if result.get("kind") == "excel_preview":
+            return format_excel_preview_result(result)
+
         content = result.get("content")
         if isinstance(content, str) and content.strip():
             return f"# ✅ {title}\n\n## 📊 结果明细\n\n{content.strip()}"
@@ -180,6 +183,126 @@ def format_skill_result(result: Any) -> str:
         return f"# 🔍 查询结果\n\n## 📊 数据明细\n\n{table}"
 
     return format_plain_response(observation_to_text(result), "执行结果")
+
+
+def format_excel_preview_result(result: dict[str, Any]) -> str:
+    title = str(result.get("title") or "Excel 读取预览")
+    data = result.get("data") if isinstance(result.get("data"), dict) else {}
+    sheets = data.get("sheets") if isinstance(data, dict) else []
+    saved_path = data.get("saved_path") if isinstance(data, dict) else ""
+    file_name = data.get("file_name") if isinstance(data, dict) else ""
+    classification_summary = data.get("classification_summary") if isinstance(data, dict) else {}
+    status_counts = classification_summary.get("status_counts") if isinstance(classification_summary, dict) else {}
+
+    sections: list[str] = [f"# 🔍 {title}"]
+    sections.append(
+        "## ✅ 关键结论\n\n"
+        f"文件：{bold(file_name or '-')}\n\n"
+        f"保存路径：{bold(saved_path or '-')}\n\n"
+        f"工作表数：{bold(len(sheets) if isinstance(sheets, list) else 0)}\n\n"
+        f"已识别：{bold(status_counts.get('recognized', 0) if isinstance(status_counts, dict) else 0)}；"
+        f"部分识别：{bold(status_counts.get('partial', 0) if isinstance(status_counts, dict) else 0)}；"
+        f"类型不明确：{bold(status_counts.get('ambiguous', 0) if isinstance(status_counts, dict) else 0)}；"
+        f"未识别：{bold(status_counts.get('unknown', 0) if isinstance(status_counts, dict) else 0)}"
+    )
+
+    if isinstance(sheets, list):
+        for sheet in sheets:
+            if not isinstance(sheet, dict):
+                continue
+            sheet_name = str(sheet.get("name") or "未命名工作表")
+            headers = [str(header) for header in sheet.get("headers") or []]
+            rows = sheet.get("rows") if isinstance(sheet.get("rows"), list) else []
+            header_text = "、".join(bold(header) for header in headers) if headers else "未识别到表头"
+            preview_rows = [list(row) if isinstance(row, (list, tuple)) else [row] for row in rows]
+            table = markdown_table(headers, preview_rows) if headers and preview_rows else "暂无可预览数据行。"
+            classification = sheet.get("classification") if isinstance(sheet.get("classification"), dict) else {}
+            status_text = _excel_classification_status_text(classification)
+            reason_text = _excel_classification_reasons_text(classification)
+            mapping_text = _excel_field_mapping_table(classification)
+            proposal_text = _excel_change_proposal_table(classification)
+            sections.append(
+                f"## 📊 工作表：{sheet_name}\n\n"
+                f"表头行：{bold(sheet.get('header_row', '-'))}\n\n"
+                f"{status_text}\n\n"
+                f"{reason_text}\n\n"
+                f"{mapping_text}\n\n"
+                f"{proposal_text}\n\n"
+                f"读取到的表头：{header_text}\n\n"
+                f"{table}"
+            )
+
+    return "\n\n".join(sections)
+
+
+def _excel_classification_status_text(classification: dict[str, Any]) -> str:
+    if not classification:
+        return "识别状态：**未识别**"
+    status_labels = {
+        "recognized": "已识别",
+        "partial": "部分识别，待确认",
+        "ambiguous": "类型不明确，待选择",
+        "unknown": "未识别",
+    }
+    status = str(classification.get("status") or "unknown")
+    category_label = str(classification.get("category_label") or "未识别")
+    confidence = classification.get("confidence", 0)
+    try:
+        confidence_text = f"{float(confidence) * 100:.0f}%"
+    except (TypeError, ValueError):
+        confidence_text = "0%"
+    return f"识别状态：{bold(status_labels.get(status, status))}；表格类型：{bold(category_label)}；置信度：{bold(confidence_text)}"
+
+
+def _excel_classification_reasons_text(classification: dict[str, Any]) -> str:
+    reasons = classification.get("reasons") if isinstance(classification, dict) else []
+    if not isinstance(reasons, list) or not reasons:
+        return "识别说明：暂无。"
+    return "识别说明：" + "；".join(str(reason) for reason in reasons)
+
+
+def _excel_field_mapping_table(classification: dict[str, Any]) -> str:
+    mappings = classification.get("field_mappings") if isinstance(classification, dict) else []
+    if not isinstance(mappings, list) or not mappings:
+        return "字段映射：暂无。"
+    rows = []
+    for mapping in mappings:
+        if not isinstance(mapping, dict):
+            continue
+        standard_label = mapping.get("standard_label") or "待确认"
+        standard_field = mapping.get("standard_field") or "-"
+        status = {
+            "mapped": "已映射",
+            "ambiguous": "待确认",
+            "unmapped": "未映射",
+        }.get(str(mapping.get("status") or ""), str(mapping.get("status") or "-"))
+        rows.append(
+            [
+                mapping.get("source_header") or "-",
+                f"{standard_label} / {standard_field}",
+                status,
+            ]
+        )
+    return "字段映射：\n\n" + markdown_table(["原始表头", "标准字段", "状态"], rows)
+
+
+def _excel_change_proposal_table(classification: dict[str, Any]) -> str:
+    proposals = classification.get("change_proposals") if isinstance(classification, dict) else []
+    if not isinstance(proposals, list) or not proposals:
+        return "字段目录建议：暂无待确认变更。"
+    rows = []
+    for proposal in proposals:
+        if not isinstance(proposal, dict):
+            continue
+        rows.append(
+            [
+                proposal.get("source_header") or "-",
+                proposal.get("suggested_field") or proposal.get("type") or "-",
+                proposal.get("standard_label") or "待用户选择",
+                "需要弹窗确认",
+            ]
+        )
+    return "字段目录建议：\n\n" + markdown_table(["原始表头", "建议编码", "中文名", "处理要求"], rows)
 
 
 def format_tool_result(action: str, result: Any) -> str:

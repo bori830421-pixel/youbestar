@@ -18,6 +18,7 @@ from agent_system.manager import (
 )
 from agent_system.file_access import list_allowed_files, read_allowed_file, read_policy
 from agent_system.skill_registry import list_skill_cards, set_skill_enabled
+from core.service_config import schedule_restart, service_status, update_lan_share
 
 
 PERMISSION_PROMPT = """你是一个可进化Agent。
@@ -90,8 +91,13 @@ class SelfEvolutionSettingsRequest(BaseModel):
     enabled: bool
 
 
+class LanShareRequest(BaseModel):
+    enabled: bool
+
+
 router = APIRouter(prefix="/skills", tags=["skills"])
 self_evolution_router = APIRouter(prefix="/self-evolution", tags=["self-evolution"])
+management_router = APIRouter(prefix="/management", tags=["management"])
 
 
 @router.get("/prompt")
@@ -180,3 +186,18 @@ def read_self_evolution_settings() -> dict[str, bool]:
 @self_evolution_router.post("/settings")
 def save_self_evolution_settings(request: SelfEvolutionSettingsRequest) -> dict[str, bool]:
     return set_self_evolution_enabled(request.enabled)
+
+
+@management_router.get("/service")
+def read_service_management() -> dict:
+    return service_status()
+
+
+@management_router.post("/lan-share")
+def save_lan_share(request: LanShareRequest) -> dict:
+    return update_lan_share(request.enabled)
+
+
+@management_router.post("/restart")
+def restart_service() -> dict:
+    return schedule_restart()

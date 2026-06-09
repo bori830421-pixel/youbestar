@@ -88,6 +88,37 @@ class AgentRuntimeTest(unittest.TestCase):
         self.assertEqual(result.action_result, "无操作")
         self.assertIn("这是一段直接回答。", result.reply)
         self.assertEqual(result.runtime_nodes, ["direct_chat", "finalize"])
+        self.assertIn("解释一下什么是供应链", memory.get_summary())
+
+    def test_runtime_uses_request_history_in_prompts(self):
+        runtime = AgentRuntime()
+        memory = Memory()
+        llm = FakeLLM(
+            [
+                '{"task_type":"chat","subject":"Excel厂家信息","sub_questions":["厂家信息"],"constraints":[],"needs_fresh_info":false,"expected_output":"回答厂家信息","query_hints":[]}',
+                "Thought: 根据历史回答。\n"
+                "Action: none\n"
+                "Params: {}\n"
+                "Response: 厂家是吉贵（原中意）玩具厂，联系人朱召深。",
+                '{"ok":true,"missing":[],"notes":"已回答厂家信息"}',
+            ]
+        )
+
+        runtime.run(
+            llm,
+            memory,
+            "表格前几行的厂家信息是什么",
+            allow_chat=True,
+            thread_id="excel-context",
+            history=[
+                {
+                    "role": "assistant",
+                    "content": "已读取 Excel 文件：中意（吉贵）棋报价总1.xlsx\n表头前几行：吉贵（原中意）玩具厂报价表\n联系人：朱召深",
+                }
+            ],
+        )
+
+        self.assertIn("吉贵（原中意）玩具厂报价表", llm.prompts[0])
 
     @patch("core.agent_nodes.run_approved_skill", return_value="should not run")
     @patch("core.agent_nodes.is_skill_enabled", return_value=True)

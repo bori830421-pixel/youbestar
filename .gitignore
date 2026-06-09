@@ -9,4 +9,5 @@ data/
 youbestar_local_*_bundle_*/
 youbestar_local_*_bundle_*.zip
 agent_system/self_evolution_settings.json
-
+agent_system/skills/local/
+agent_system/skills/community/

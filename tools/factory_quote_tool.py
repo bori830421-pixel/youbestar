@@ -20,22 +20,37 @@ DEFAULT_LIBRARY_PATH = DATA_DIR / "factory_quotes.sqlite3"
 IMAGE_TYPE_SKU = "sku_image"
 IMAGE_TYPE_REAL = "real_photo"
 PHONE_RE = re.compile(r"(?:\+?86[-\s]?)?(1[3-9]\d[-\s]?\d{4}[-\s]?\d{4}|\d{3,4}[-\s]?\d{7,8}(?:[-转]\d{1,6})?)")
+FACTORY_NAME_RE = re.compile(r"[\u4e00-\u9fffA-Za-z0-9（）()·._-]{2,}(?:厂|工厂|厂家|公司|实业|制造|玩具厂|有限公司|供应商|供货商)")
+GENERIC_FACTORY_TITLES = {
+    "产品报价表",
+    "报价表",
+    "工厂报价表",
+    "商品报价表",
+    "价格表",
+    "资料表",
+}
 DEFAULT_COLUMNS = [
     "SKU图",
     "货号",
     "品名",
+    "品牌",
     "系列",
     "装箱数",
     "成本单价(元)",
     "成本箱价(元)",
     "产品尺寸(cm)",
     "包装尺寸(cm)",
+    "产品规格",
+    "尺寸原文",
+    "内盒数量",
+    "内盒尺寸(cm)",
     "箱规尺寸(cm)",
     "箱毛重(kg)",
     "箱净重(kg)",
     "单品毛重(g)",
     "单品净重(g)",
     "快递包装重量(g)",
+    "重量原文",
     "含税",
     "含运费",
 ]
@@ -43,18 +58,29 @@ DEFAULT_COLUMNS = [
 
 HEADER_ALIASES = {
     "category": ("中文包装", "系列", "分类"),
+    "brand": ("品牌", "品牌名称", "牌子", "brand"),
     "image": ("产品图片", "图片"),
     "sku": ("货号", "款号", "型号"),
-    "product_name": ("品名", "产品名称", "名称"),
+    "product_name": ("品名", "产品名称", "名称", "包装/品名", "包装品名"),
     "package_type": ("包装", "包装方式"),
-    "pcs_per_carton": ("装箱数量", "装箱数", "每箱数量"),
-    "cost_unit_price": ("品牌价", "单价", "成本价", "出厂价"),
+    "pcs_per_carton": ("装箱数量", "装箱数", "每箱数量", "数量(只)", "数量（只）"),
+    "inner_box_quantity": ("inner_box_quantity", "内盒数量", "内盒数", "内箱数", "中盒数", "内盒", "内箱", "中盒"),
+    "inner_box_size_cm": ("inner_box_size_cm", "内盒尺寸(cm)", "内盒尺寸", "内盒规格(cm)", "内盒规格", "内箱尺寸", "内箱规格", "中盒尺寸", "中盒规格"),
+    "cost_unit_price": ("品牌价", "单价", "成本价", "出厂价", "厂价", "厂价(RMB)", "厂价RMB"),
     "cost_carton_price": ("单价    (元/件)", "单价(元/件)", "箱价", "每箱价格"),
     "carton_size_cm": ("外箱规格(cm)", "外箱规格", "外箱尺寸"),
-    "package_size_cm": ("包装规格(cm)", "包装规格", "包装尺寸"),
-    "product_size_cm": ("产品尺寸（cm）", "产品尺寸(cm)", "产品尺寸"),
-    "gross_weight_kg": ("毛重\n(公斤)", "毛重(公斤)", "毛重"),
-    "net_weight_kg": ("净重\n(公斤)", "净重(公斤)", "净重"),
+    "package_size_cm": ("package_size_cm", "包装规格(cm)", "包装规格", "包装尺寸(cm)", "包装尺寸", "彩盒规格(cm)", "彩盒规格", "彩盒尺寸(cm)", "彩盒尺寸"),
+    "product_size_cm": ("product_size_cm", "产品尺寸（cm）", "产品尺寸(cm)", "产品尺寸", "棋盘尺寸(cm)", "棋盘尺寸"),
+    "product_spec": ("product_spec", "产品规格", "商品规格", "规格型号", "棋盘规格"),
+    "dimension_text": ("dimension_text", "尺寸原文", "尺寸说明", "规格原文"),
+    "gross_weight_kg": ("gross_weight_kg", "carton_gross_weight_kg", "毛重\n(公斤)", "毛重(公斤)", "毛重", "箱毛重(kg)", "箱毛重", "外箱毛重"),
+    "net_weight_kg": ("net_weight_kg", "carton_net_weight_kg", "净重\n(公斤)", "净重(公斤)", "净重", "箱净重(kg)", "箱净重", "外箱净重"),
+    "combined_weight_kg": ("combined_carton_weight_kg", "毛净重(KG)", "毛净重(kg)", "毛净重(公斤)", "毛/净重", "毛/净重(kg)", "毛重/净重", "毛重/净重(kg)", "毛净重", "重量"),
+    "single_gross_weight_g": ("single_gross_weight_g", "单品毛重", "单个毛重", "产品毛重", "单品毛重(g)"),
+    "single_net_weight_g": ("single_net_weight_g", "单品净重", "单个净重", "产品净重", "单品净重(g)"),
+    "single_weight_g": ("单品克重", "单个克重", "克重"),
+    "shipping_packaged_weight_g": ("shipping_packaged_weight_g", "快递包装重量(g)", "快递包装重量", "打包重量", "发货重量", "包装后重量"),
+    "weight_text": ("weight_text", "重量原文", "重量说明", "重量备注"),
     "barcode": ("条码", "商品条码"),
     "notes": ("备注", "说明"),
 }
@@ -78,6 +104,16 @@ def _clean_phone(value: Any) -> str:
 
 def _normalize_sku(value: Any) -> str:
     return _clean_text(value).upper()
+
+
+def _brand_from_params(params: dict[str, Any] | None = None) -> str:
+    params = params or {}
+    return _clean_text(params.get("brand") or params.get("brand_name") or params.get("品牌"))
+
+
+def _factory_from_params(params: dict[str, Any] | None = None) -> str:
+    params = params or {}
+    return _clean_text(params.get("factory_name") or params.get("factory") or params.get("工厂") or params.get("厂家"))
 
 
 def _safe_float(value: Any) -> float | None:
@@ -175,6 +211,51 @@ def _parse_weight_to_g(value: Any) -> float | None:
     return number
 
 
+def _parse_weight_to_kg(value: Any) -> float | None:
+    grams = _parse_weight_to_g(value)
+    if grams is None:
+        return None
+    text = _clean_text(value).lower()
+    if "kg" in text or "公斤" in text or "千克" in text:
+        return round(grams / 1000, 4)
+    if isinstance(value, (int, float)):
+        return float(value)
+    return round(grams / 1000, 4) if grams > 100 else grams
+
+
+def _extract_numbers(value: Any) -> list[float]:
+    return [float(match) for match in re.findall(r"\d+(?:\.\d+)?", _clean_text(value))]
+
+
+def _extract_weight_tokens(value: Any) -> list[str]:
+    return re.findall(r"\d+(?:\.\d+)?\s*(?:kg|公斤|千克|g|克)?", _clean_text(value), flags=re.I)
+
+
+def _parse_combined_carton_weights(value: Any) -> tuple[float | None, float | None, str]:
+    text = _clean_text(value)
+    if not text:
+        return None, None, ""
+    if _looks_like_dimension(text):
+        return None, None, text
+    tokens = _extract_weight_tokens(text)
+    if re.search(r"毛\s*/\s*净|毛重\s*/\s*净重|毛净重", text, re.I) and len(tokens) >= 2:
+        return _parse_weight_to_kg(tokens[0]), _parse_weight_to_kg(tokens[1]), text
+    gross_match = re.search(r"毛(?!净)重?\s*[:：]?\s*(\d+(?:\.\d+)?\s*(?:kg|公斤|千克|g|克)?)", text, re.I)
+    net_match = re.search(r"(?<!毛)净重?\s*[:：]?\s*(\d+(?:\.\d+)?\s*(?:kg|公斤|千克|g|克)?)", text, re.I)
+    if gross_match or net_match:
+        gross = _parse_weight_to_kg(gross_match.group(1)) if gross_match else None
+        net = _parse_weight_to_kg(net_match.group(1)) if net_match else None
+        return gross, net, text
+    if len(tokens) >= 2:
+        return _parse_weight_to_kg(tokens[0]), _parse_weight_to_kg(tokens[1]), text
+    return None, None, text
+
+
+def _looks_like_dimension(value: Any) -> bool:
+    text = _normalize_dimension_cm(value).lower()
+    return bool(re.search(r"\d+(?:\.\d+)?\s*[*x×]\s*\d+(?:\.\d+)?", text))
+
+
 def _normalize_image_type(value: Any) -> str:
     raw = _clean_key(value)
     if "实拍" in raw or raw in {"realphoto", "real_photo", "photo", "photos", "actualphoto", "scenephoto"}:
@@ -227,16 +308,20 @@ def _product_weight_profile(product: dict[str, Any]) -> dict[str, Any]:
     manual_specs = _product_manual_specs(product)
     manual_net = _parse_weight_to_g(manual_specs.get("single_net_weight_g"))
     manual_gross = _parse_weight_to_g(manual_specs.get("single_gross_weight_g"))
-    shipping_packaged = _parse_weight_to_g(manual_specs.get("shipping_packaged_weight_g"))
+    excel_net = _parse_weight_to_g(product.get("single_net_weight_g"))
+    excel_gross = _parse_weight_to_g(product.get("single_gross_weight_g"))
+    manual_shipping = _parse_weight_to_g(manual_specs.get("shipping_packaged_weight_g"))
+    excel_shipping = _parse_weight_to_g(product.get("shipping_packaged_weight_g"))
+    shipping_packaged = manual_shipping if manual_shipping is not None else excel_shipping
     derived_net = _derived_single_weight_g(product, "net_weight_kg")
     derived_gross = _derived_single_weight_g(product, "gross_weight_kg")
     return {
-        "single_net_weight_g": manual_net if manual_net is not None else derived_net,
-        "single_net_weight_source": "manual" if manual_net is not None else ("carton_derived" if derived_net is not None else "missing"),
-        "single_gross_weight_g": manual_gross if manual_gross is not None else derived_gross,
-        "single_gross_weight_source": "manual" if manual_gross is not None else ("carton_derived" if derived_gross is not None else "missing"),
+        "single_net_weight_g": manual_net if manual_net is not None else (excel_net if excel_net is not None else derived_net),
+        "single_net_weight_source": "manual" if manual_net is not None else ("excel" if excel_net is not None else ("carton_derived" if derived_net is not None else "missing")),
+        "single_gross_weight_g": manual_gross if manual_gross is not None else (excel_gross if excel_gross is not None else derived_gross),
+        "single_gross_weight_source": "manual" if manual_gross is not None else ("excel" if excel_gross is not None else ("carton_derived" if derived_gross is not None else "missing")),
         "shipping_packaged_weight_g": shipping_packaged,
-        "shipping_packaged_weight_source": "manual" if shipping_packaged is not None else "missing",
+        "shipping_packaged_weight_source": "manual" if manual_shipping is not None else ("excel" if excel_shipping is not None else "missing"),
     }
 
 
@@ -306,6 +391,7 @@ def _ensure_library_schema(connection: sqlite3.Connection) -> None:
             id TEXT PRIMARY KEY,
             factory_id TEXT NOT NULL,
             factory_name TEXT NOT NULL,
+            brand TEXT,
             sku TEXT NOT NULL,
             sku_normalized TEXT NOT NULL,
             product_name TEXT NOT NULL,
@@ -319,7 +405,14 @@ def _ensure_library_schema(connection: sqlite3.Connection) -> None:
         )
         """
     )
+    existing_columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(factory_products)").fetchall()
+    }
+    if "brand" not in existing_columns:
+        connection.execute("ALTER TABLE factory_products ADD COLUMN brand TEXT")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_factory_products_factory ON factory_products(factory_name)")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_factory_products_brand ON factory_products(brand)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_factory_products_sku ON factory_products(sku_normalized)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_factory_products_content_hash ON factory_products(content_hash)")
     connection.execute(
@@ -368,7 +461,7 @@ def _load_openpyxl():
 def _detect_header_row(ws) -> int:
     for row in range(1, min(ws.max_row, 20) + 1):
         values = [_clean_key(ws.cell(row, col).value) for col in range(1, ws.max_column + 1)]
-        if "货号" in values and ("品名" in values or "产品名称" in values):
+        if "货号" in values and any("品名" in value or value == "产品名称" for value in values):
             return row
     return 3
 
@@ -380,7 +473,14 @@ def _header_map(ws, header_row: int) -> dict[str, int]:
         if _clean_key(ws.cell(header_row, col).value)
     }
     mapped: dict[str, int] = {}
-    for canonical, aliases in HEADER_ALIASES.items():
+    priority = ["combined_weight_kg", "gross_weight_kg", "net_weight_kg"]
+    ordered_aliases = {
+        key: HEADER_ALIASES[key]
+        for key in priority
+        if key in HEADER_ALIASES
+    }
+    ordered_aliases.update({key: value for key, value in HEADER_ALIASES.items() if key not in ordered_aliases})
+    for canonical, aliases in ordered_aliases.items():
         for alias in aliases:
             col = raw_headers.get(_clean_key(alias))
             if col:
@@ -389,16 +489,28 @@ def _header_map(ws, header_row: int) -> dict[str, int]:
     return mapped
 
 
-def _factory_name_from_sheet(ws, fallback: str) -> str:
+def _extract_factory_name_from_text(text: str) -> str:
+    clean = _clean_text(text)
+    if not clean or clean in GENERIC_FACTORY_TITLES:
+        return ""
+    explicit = re.search(r"(?:厂家|工厂|供应商|供货商|厂名|公司)\s*[:：]\s*([^\n\r；;，,]+)", clean, re.I)
+    if explicit:
+        return _clean_text(explicit.group(1))
+    match = FACTORY_NAME_RE.search(clean)
+    return _clean_text(match.group(0)) if match else ""
+
+
+def _factory_name_from_sheet(ws) -> str:
     for row in range(1, min(ws.max_row, 3) + 1):
         for col in range(1, min(ws.max_column, 5) + 1):
             value = ws.cell(row, col).value
             if not value:
                 continue
             first_line = str(value).splitlines()[0].strip()
-            if first_line:
-                return first_line
-    return fallback
+            factory_name = _extract_factory_name_from_text(first_line)
+            if factory_name:
+                return factory_name
+    return ""
 
 
 def _header_metadata_text(ws, header_row: int) -> str:
@@ -439,10 +551,26 @@ def _extract_business_contact(text: str) -> str:
     return _clean_text(candidate)
 
 
-def _factory_metadata_from_sheet(ws, fallback: str, header_row: int) -> dict[str, str]:
+def _extract_brand_from_text(text: str) -> str:
+    match = re.search(r"(?:品牌|牌子|brand)\s*[:：]\s*([^\n\r；;，,]+)", text or "", re.I)
+    if not match:
+        return ""
+    return _clean_text(match.group(1))
+
+
+def _factory_metadata_from_sheet(ws, fallback: str, header_row: int, params: dict[str, Any] | None = None) -> dict[str, str]:
     header_text = _header_metadata_text(ws, header_row)
+    confirmed_factory = _factory_from_params(params)
+    confirmed_brand = _brand_from_params(params)
+    detected_factory = _factory_name_from_sheet(ws)
+    detected_brand = _extract_brand_from_text(header_text)
     return {
-        "factory_name": _factory_name_from_sheet(ws, fallback),
+        "factory_name": detected_factory or confirmed_factory,
+        "brand": detected_brand or confirmed_brand,
+        "identity_confirmed": bool(confirmed_factory or confirmed_brand),
+        "factory_detected": detected_factory,
+        "brand_detected": detected_brand,
+        "fallback_name": fallback,
         "business_contact": _extract_business_contact(header_text),
         "business_phone": _extract_business_phone(header_text),
         "raw": _raw_contact_line(header_text),
@@ -466,7 +594,8 @@ def _build_product(
     factory_metadata: dict[str, str],
     source_file: Path,
 ) -> dict[str, Any] | None:
-    factory_name = factory_metadata["factory_name"]
+    factory_name = factory_metadata.get("factory_name", "")
+    brand = _clean_text(_cell_value(ws, data_ws, row, columns.get("brand")) or factory_metadata.get("brand"))
     sku = _normalize_sku(_cell_value(ws, data_ws, row, columns.get("sku")))
     product_name = _clean_text(_cell_value(ws, data_ws, row, columns.get("product_name")))
     if not sku and not product_name:
@@ -477,11 +606,46 @@ def _build_product(
     carton_price = _safe_float(_cell_value(ws, data_ws, row, columns.get("cost_carton_price")))
     if carton_price is None and unit_price is not None and pcs_per_carton:
         carton_price = round(unit_price * pcs_per_carton, 4)
+    combined_gross, combined_net, combined_weight_text = _parse_combined_carton_weights(_cell_value(ws, data_ws, row, columns.get("combined_weight_kg")))
+    gross_weight_kg = _safe_float(_cell_value(ws, data_ws, row, columns.get("gross_weight_kg")))
+    net_weight_kg = _safe_float(_cell_value(ws, data_ws, row, columns.get("net_weight_kg")))
+    if gross_weight_kg is None:
+        gross_weight_kg = combined_gross
+    if net_weight_kg is None:
+        net_weight_kg = combined_net
+    product_spec = _clean_text(_cell_value(ws, data_ws, row, columns.get("product_spec")))
+    dimension_text = _clean_text(_cell_value(ws, data_ws, row, columns.get("dimension_text")))
+    product_size_cm = _clean_text(_cell_value(ws, data_ws, row, columns.get("product_size_cm")))
+    package_size_cm = _clean_text(_cell_value(ws, data_ws, row, columns.get("package_size_cm")))
+    if not product_size_cm and product_spec and _looks_like_dimension(product_spec):
+        product_size_cm = product_spec
+    if not dimension_text and product_spec and not _looks_like_dimension(product_spec):
+        dimension_text = product_spec
+    single_gross_weight_g = _parse_weight_to_g(_cell_value(ws, data_ws, row, columns.get("single_gross_weight_g")))
+    single_net_weight_g = _parse_weight_to_g(_cell_value(ws, data_ws, row, columns.get("single_net_weight_g")))
+    single_weight_text = _clean_text(_cell_value(ws, data_ws, row, columns.get("single_weight_g")))
+    single_weight_g = _parse_weight_to_g(single_weight_text)
+    if single_weight_g is not None:
+        if single_gross_weight_g is None:
+            single_gross_weight_g = single_weight_g
+        if single_net_weight_g is None:
+            single_net_weight_g = single_weight_g
+    shipping_packaged_weight_g = _parse_weight_to_g(_cell_value(ws, data_ws, row, columns.get("shipping_packaged_weight_g")))
+    weight_text = _clean_text(_cell_value(ws, data_ws, row, columns.get("weight_text")) or combined_weight_text or single_weight_text)
 
     record = {
-        "id": _stable_id("fpq", factory_name, sku, product_name, _cell_value(ws, data_ws, row, columns.get("package_type"))),
-        "factory_id": _stable_id("factory", factory_name),
+        "id": _stable_id("fpq", factory_name, brand, sku, product_name, _cell_value(ws, data_ws, row, columns.get("package_type"))),
+        "factory_id": _stable_id("factory", factory_name or brand),
         "factory_name": factory_name,
+        "brand": brand,
+        "identity": {
+            "factory_name": factory_name,
+            "brand": brand,
+            "identity_confirmed": bool(factory_metadata.get("identity_confirmed")),
+            "factory_detected": factory_metadata.get("factory_detected", ""),
+            "brand_detected": factory_metadata.get("brand_detected", ""),
+            "fallback_name": factory_metadata.get("fallback_name", ""),
+        },
         "factory_contact": {
             "business_contact": factory_metadata.get("business_contact", ""),
             "business_phone": factory_metadata.get("business_phone", ""),
@@ -490,15 +654,23 @@ def _build_product(
         "sku": sku,
         "product_name": product_name,
         "series": _clean_text(_cell_value(ws, data_ws, row, columns.get("category"))),
+        "product_spec": product_spec,
+        "dimension_text": dimension_text,
         "package_type": _clean_text(_cell_value(ws, data_ws, row, columns.get("package_type"))),
         "pcs_per_carton": pcs_per_carton,
+        "inner_box_quantity": _safe_int(_cell_value(ws, data_ws, row, columns.get("inner_box_quantity"))),
+        "inner_box_size_cm": _clean_text(_cell_value(ws, data_ws, row, columns.get("inner_box_size_cm"))),
         "cost_unit_price": unit_price,
         "cost_carton_price": carton_price,
         "carton_size_cm": _clean_text(_cell_value(ws, data_ws, row, columns.get("carton_size_cm"))),
-        "package_size_cm": _clean_text(_cell_value(ws, data_ws, row, columns.get("package_size_cm"))),
-        "product_size_cm": _clean_text(_cell_value(ws, data_ws, row, columns.get("product_size_cm"))),
-        "gross_weight_kg": _safe_float(_cell_value(ws, data_ws, row, columns.get("gross_weight_kg"))),
-        "net_weight_kg": _safe_float(_cell_value(ws, data_ws, row, columns.get("net_weight_kg"))),
+        "package_size_cm": package_size_cm,
+        "product_size_cm": product_size_cm,
+        "gross_weight_kg": gross_weight_kg,
+        "net_weight_kg": net_weight_kg,
+        "single_gross_weight_g": single_gross_weight_g,
+        "single_net_weight_g": single_net_weight_g,
+        "shipping_packaged_weight_g": shipping_packaged_weight_g,
+        "weight_text": weight_text,
         "barcode": _clean_text(_cell_value(ws, data_ws, row, columns.get("barcode"))),
         "notes": _clean_text(_cell_value(ws, data_ws, row, columns.get("notes"))),
         "image_asset_ids": [],
@@ -517,7 +689,11 @@ def _build_product(
     return record
 
 
-def load_quote_products(source_path: str | None = None, workbook_path: str | None = None) -> list[dict[str, Any]]:
+def load_quote_products(
+    source_path: str | None = None,
+    workbook_path: str | None = None,
+    params: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     openpyxl = _load_openpyxl()
     products: list[dict[str, Any]] = []
     for path in _resolve_source_paths(source_path, workbook_path):
@@ -529,7 +705,7 @@ def load_quote_products(source_path: str | None = None, workbook_path: str | Non
             columns = _header_map(ws, header_row)
             if "sku" not in columns and "product_name" not in columns:
                 continue
-            factory_metadata = _factory_metadata_from_sheet(ws, path.stem, header_row)
+            factory_metadata = _factory_metadata_from_sheet(ws, path.stem, header_row, params)
             current_series = ""
             for row in range(header_row + 1, ws.max_row + 1):
                 series_value = _clean_text(_cell_value(ws, data_ws, row, columns.get("category")))
@@ -561,6 +737,7 @@ def save_products_to_library(products: list[dict[str, Any]], library_path: str |
                     id,
                     factory_id,
                     factory_name,
+                    brand,
                     sku,
                     sku_normalized,
                     product_name,
@@ -572,12 +749,13 @@ def save_products_to_library(products: list[dict[str, Any]], library_path: str |
                     imported_at,
                     data_json
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     product.get("id"),
                     product.get("factory_id"),
                     product.get("factory_name"),
+                    product.get("brand"),
                     product.get("sku"),
                     _normalize_sku(product.get("sku")),
                     product.get("product_name"),
@@ -594,10 +772,72 @@ def save_products_to_library(products: list[dict[str, Any]], library_path: str |
     return {"library_path": str(path), "stored_count": len(products), "source_count": len(source_paths), "imported_at": imported_at}
 
 
+def _products_missing_identity(products: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    missing: list[dict[str, Any]] = []
+    for product in products:
+        if _clean_text(product.get("factory_name")) or _clean_text(product.get("brand")):
+            continue
+        identity = product.get("identity") if isinstance(product.get("identity"), dict) else {}
+        source = product.get("source") if isinstance(product.get("source"), dict) else {}
+        missing.append(
+            {
+                "source_path": _clean_text(source.get("path")),
+                "sheet": _clean_text(source.get("sheet")),
+                "row": source.get("row"),
+                "sku": product.get("sku", ""),
+                "product_name": product.get("product_name", ""),
+                "fallback_name": _clean_text(identity.get("fallback_name")),
+            }
+        )
+    return missing
+
+
+def _identity_required_result(
+    products: list[dict[str, Any]],
+    missing_identity: list[dict[str, Any]],
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    source_path = str(params.get("source_path") or params.get("workbook_path") or DEFAULT_SOURCE_PATH)
+    samples = missing_identity[:10]
+    return {
+        "ok": False,
+        "kind": "factory_quote_import_identity_required",
+        "title": "工厂报价导入需要确认",
+        "columns": ["文件", "工作表", "行号", "货号", "品名", "候选名称"],
+        "rows": [
+            [
+                item.get("source_path") or source_path,
+                item.get("sheet") or "-",
+                item.get("row") or "-",
+                item.get("sku") or "-",
+                item.get("product_name") or "-",
+                item.get("fallback_name") or "未识别",
+            ]
+            for item in samples
+        ],
+        "summary": {
+            "状态": "未写入数据库",
+            "原因": "没有识别到明确的工厂名称或品牌。",
+            "待确认产品数": len(missing_identity),
+            "提示": "请确认工厂名称或品牌后再导入。",
+        },
+        "data": {
+            "requires_confirmation": True,
+            "confirmation_fields": ["factory_name", "brand"],
+            "message": "导入报价资料库前必须至少确认工厂名称或品牌之一。",
+            "source_path": source_path,
+            "total_count": len(products),
+            "missing_identity": samples,
+            "products": products[:20],
+        },
+    }
+
+
 def _product_from_row(row: sqlite3.Row) -> dict[str, Any]:
     data = json.loads(row["data_json"])
     if isinstance(data, dict):
         data.setdefault("id", row["id"])
+        data.setdefault("brand", row["brand"] or "")
         return data
     return {}
 
@@ -607,6 +847,7 @@ def load_products_from_library(params: dict[str, Any]) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     factory_name = str(params.get("factory_name") or params.get("factory") or "").strip()
+    brand = _brand_from_params(params)
     sku = _normalize_sku(params.get("sku") or params.get("货号"))
     keyword = str(params.get("keyword") or params.get("query") or params.get("product_name") or "").strip()
 
@@ -618,6 +859,9 @@ def load_products_from_library(params: dict[str, Any]) -> list[dict[str, Any]]:
     if factory_name:
         where.append("factory_name LIKE ?")
         values.append(f"%{factory_name}%")
+    if brand:
+        where.append("brand LIKE ?")
+        values.append(f"%{brand}%")
     if keyword and not sku:
         where.append("(sku_normalized LIKE ? OR product_name LIKE ? OR series LIKE ? OR barcode LIKE ?)")
         like = f"%{keyword}%"
@@ -888,25 +1132,26 @@ def library_status(params: dict[str, Any] | None = None) -> dict[str, Any]:
             "ok": True,
             "kind": "factory_quote_library_status",
             "title": "工厂报价资料库状态",
-            "columns": ["资料库", "工厂数", "产品数", "状态"],
-            "rows": [[str(path), 0, 0, "未创建"]],
-            "summary": {"资料库": str(path), "工厂数": 0, "产品数": 0, "状态": "未创建，请先执行导入"},
+            "columns": ["资料库", "工厂数", "品牌数", "产品数", "状态"],
+            "rows": [[str(path), 0, 0, 0, "未创建"]],
+            "summary": {"资料库": str(path), "工厂数": 0, "品牌数": 0, "产品数": 0, "状态": "未创建，请先执行导入"},
             "data": {"library_path": str(path), "exists": False},
         }
 
     with _connect_library(path) as connection:
         product_count = connection.execute("SELECT COUNT(*) FROM factory_products").fetchone()[0]
         factory_count = connection.execute("SELECT COUNT(DISTINCT factory_name) FROM factory_products").fetchone()[0]
+        brand_count = connection.execute("SELECT COUNT(DISTINCT brand) FROM factory_products WHERE brand IS NOT NULL AND brand <> ''").fetchone()[0]
         latest_import = connection.execute("SELECT MAX(imported_at) FROM factory_products").fetchone()[0]
 
     return {
         "ok": True,
         "kind": "factory_quote_library_status",
         "title": "工厂报价资料库状态",
-        "columns": ["资料库", "工厂数", "产品数", "最近导入"],
-        "rows": [[str(path), factory_count, product_count, latest_import or "-"]],
-        "summary": {"资料库": str(path), "工厂数": factory_count, "产品数": product_count, "最近导入": latest_import or "-"},
-        "data": {"library_path": str(path), "exists": True, "factory_count": factory_count, "product_count": product_count, "latest_import": latest_import},
+        "columns": ["资料库", "工厂数", "品牌数", "产品数", "最近导入"],
+        "rows": [[str(path), factory_count, brand_count, product_count, latest_import or "-"]],
+        "summary": {"资料库": str(path), "工厂数": factory_count, "品牌数": brand_count, "产品数": product_count, "最近导入": latest_import or "-"},
+        "data": {"library_path": str(path), "exists": True, "factory_count": factory_count, "brand_count": brand_count, "product_count": product_count, "latest_import": latest_import},
     }
 
 
@@ -919,6 +1164,13 @@ def _matches_factory(product: dict[str, Any], factory_name: str) -> bool:
     return clean_query in factory or clean_query == factory_id
 
 
+def _matches_brand(product: dict[str, Any], brand: str) -> bool:
+    clean_query = _clean_text(brand).lower()
+    if not clean_query:
+        return True
+    return clean_query in _clean_text(product.get("brand")).lower()
+
+
 def _matches_keyword(product: dict[str, Any], keyword: str) -> bool:
     clean_keyword = _clean_text(keyword).lower()
     if not clean_keyword:
@@ -926,6 +1178,7 @@ def _matches_keyword(product: dict[str, Any], keyword: str) -> bool:
     fields = (
         product.get("sku"),
         product.get("product_name"),
+        product.get("brand"),
         product.get("series"),
         product.get("barcode"),
         product.get("notes"),
@@ -937,14 +1190,17 @@ def find_products(params: dict[str, Any]) -> list[dict[str, Any]]:
     use_excel = bool(params.get("use_excel") or params.get("workbook_path") or params.get("source_path"))
     products = [] if use_excel else load_products_from_library(params)
     if not products:
-        products = load_quote_products(params.get("source_path"), params.get("workbook_path"))
-    factory_name = str(params.get("factory_name") or params.get("factory") or "").strip()
+        products = load_quote_products(params.get("source_path"), params.get("workbook_path"), params)
+    factory_name = _factory_from_params(params)
+    brand = _brand_from_params(params)
     sku = _normalize_sku(params.get("sku") or params.get("货号"))
     keyword = str(params.get("keyword") or params.get("query") or params.get("product_name") or "").strip()
 
     matches = []
     for product in products:
         if not _matches_factory(product, factory_name):
+            continue
+        if not _matches_brand(product, brand):
             continue
         if sku and product.get("sku") != sku:
             continue
@@ -1019,18 +1275,24 @@ def _row_for_product(product: dict[str, Any], calculation: dict[str, Any] | None
         _image_markdown(sku_image, "SKU图"),
         product.get("sku", ""),
         product.get("product_name", ""),
+        product.get("brand", ""),
         product.get("series", ""),
         product.get("pcs_per_carton") or "-",
         _format_price(product.get("cost_unit_price")),
         _format_price(product.get("cost_carton_price")),
         product.get("product_size_cm") or "-",
         product.get("package_size_cm") or "-",
+        product.get("product_spec") or "-",
+        product.get("dimension_text") or "-",
+        product.get("inner_box_quantity") or "-",
+        product.get("inner_box_size_cm") or "-",
         product.get("carton_size_cm") or "-",
         _format_number(product.get("gross_weight_kg")),
         _format_number(product.get("net_weight_kg")),
         _single_weight_text(weight_profile, "single_gross_weight_g", "single_gross_weight_source"),
         _single_weight_text(weight_profile, "single_net_weight_g", "single_net_weight_source"),
         _format_grams_with_unit(weight_profile.get("shipping_packaged_weight_g")),
+        product.get("weight_text") or "-",
         tax_text,
         freight_text,
     ]
@@ -1055,18 +1317,24 @@ def _summary_for_product(
     contact = _factory_contact(product)
     summary = {
         "工厂": product.get("factory_name"),
+        "品牌": product.get("brand") or "未记录",
         "货号": product.get("sku"),
         "品名": product.get("product_name"),
         "装箱数": product.get("pcs_per_carton"),
         "成本单价": _format_currency(product.get("cost_unit_price")),
         "产品尺寸": _format_cm_with_unit(product.get("product_size_cm")),
         "包装尺寸": _format_cm_with_unit(product.get("package_size_cm")),
+        "产品规格": product.get("product_spec") or "未记录",
+        "尺寸原文": product.get("dimension_text") or "未记录",
+        "内盒数量": product.get("inner_box_quantity") or "未记录",
+        "内盒尺寸": _format_cm_with_unit(product.get("inner_box_size_cm")) if product.get("inner_box_size_cm") else "未记录",
         "箱规尺寸": _format_cm_with_unit(product.get("carton_size_cm")),
         "箱毛重": _format_kg_with_unit(product.get("gross_weight_kg")),
         "箱净重": _format_kg_with_unit(product.get("net_weight_kg")),
         "单品毛重": _single_weight_text(weight_profile, "single_gross_weight_g", "single_gross_weight_source"),
         "单品净重": _single_weight_text(weight_profile, "single_net_weight_g", "single_net_weight_source"),
         "快递包装重量": _format_grams_with_unit(weight_profile.get("shipping_packaged_weight_g")),
+        "重量原文": product.get("weight_text") or "未记录",
         "SKU图": "已绑定" if sku_image else "未绑定",
         "实拍图数量": len(real_photos or []),
         "含税": "未知",
@@ -1220,7 +1488,10 @@ def query_factory_quote(params: dict[str, Any]) -> dict[str, Any]:
 def import_factory_quotes(params: dict[str, Any]) -> dict[str, Any]:
     params = params or {}
     try:
-        products = load_quote_products(params.get("source_path"), params.get("workbook_path"))
+        products = load_quote_products(params.get("source_path"), params.get("workbook_path"), params)
+        missing_identity = _products_missing_identity(products)
+        if missing_identity:
+            return _identity_required_result(products, missing_identity, params)
         save_result = save_products_to_library(products, _library_path(params), replace_source=bool(params.get("replace_source", True)))
     except Exception as exc:
         return {
@@ -1231,14 +1502,31 @@ def import_factory_quotes(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     factory_names = sorted({_clean_text(product.get("factory_name")) for product in products if product.get("factory_name")})
+    brand_names = sorted({_clean_text(product.get("brand")) for product in products if product.get("brand")})
     return {
         "ok": True,
         "kind": "factory_quote_import",
         "title": "工厂报价导入结果",
-        "columns": ["工厂", "产品数量"],
-        "rows": [[factory, sum(1 for product in products if product.get("factory_name") == factory)] for factory in factory_names],
+        "columns": ["工厂", "品牌", "产品数量"],
+        "rows": [
+            [
+                factory or "未记录",
+                brand or "未记录",
+                sum(
+                    1
+                    for product in products
+                    if _clean_text(product.get("factory_name")) == factory
+                    and _clean_text(product.get("brand")) == brand
+                ),
+            ]
+            for factory, brand in sorted({
+                (_clean_text(product.get("factory_name")), _clean_text(product.get("brand")))
+                for product in products
+            })
+        ],
         "summary": {
             "工厂数": len(factory_names),
+            "品牌数": len(brand_names),
             "产品数": len(products),
             "资料库": save_result["library_path"],
             "状态": "已写入本地报价资料库，未写入长期记忆",

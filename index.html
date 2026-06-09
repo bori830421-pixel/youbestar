@@ -646,6 +646,12 @@
       gap: 22px;
     }
 
+    .messages.drag-over {
+      outline: 2px dashed var(--primary);
+      outline-offset: -12px;
+      background: #eef4ff;
+    }
+
     .empty-state {
       height: 100%;
       display: grid;
@@ -972,7 +978,10 @@
     }
 
     .skills-view,
-    .evolution-view {
+    .evolution-view,
+    .records-view,
+    .reference-view,
+    .management-view {
       min-height: 0;
       height: 100%;
       display: grid;
@@ -986,13 +995,19 @@
     }
 
     .skills-topbar,
-    .evolution-topbar {
+    .evolution-topbar,
+    .records-topbar,
+    .reference-topbar,
+    .management-topbar {
       padding: 0 22px;
       border-bottom: 1px solid var(--line);
     }
 
     .skills-title-row,
-    .evolution-title-row {
+    .evolution-title-row,
+    .records-title-row,
+    .reference-title-row,
+    .management-title-row {
       display: flex;
       align-items: center;
       gap: 14px;
@@ -1005,17 +1020,246 @@
       white-space: nowrap;
     }
 
-    .evolution-content {
+    .evolution-content,
+    .records-content,
+    .reference-content,
+    .management-content {
       min-height: 0;
       overflow-y: auto;
       padding: 24px;
       background: #fafafa;
     }
 
-    .evolution-panel {
-      max-width: 860px;
+    .evolution-panel,
+    .records-panel,
+    .reference-panel,
+    .management-panel {
       display: grid;
       gap: 18px;
+    }
+
+    .evolution-panel,
+    .management-panel {
+      max-width: 860px;
+    }
+
+    .records-panel {
+      max-width: 1120px;
+    }
+
+    .reference-panel {
+      max-width: 1180px;
+    }
+
+    .records-types-section,
+    .records-toolbar,
+    .records-form-section,
+    .records-table-section,
+    .reference-source-section,
+    .reference-export-section,
+    .reference-results-section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      background: var(--surface);
+    }
+
+    .reference-source-form,
+    .reference-export-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .reference-actions,
+    .reference-field-list {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .reference-field-list {
+      align-items: stretch;
+    }
+
+    .reference-field-chip {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #f8fafc;
+      color: #30343b;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .reference-field-chip input {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .reference-checkbox-row {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: #30343b;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .reference-checkbox-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .reference-result-row.selected {
+      background: #eef4ff;
+    }
+
+    .reference-thumb {
+      width: 48px;
+      height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      object-fit: cover;
+      background: #f3f5f8;
+      display: block;
+    }
+
+    .reference-confidence {
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef4ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .records-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .records-type-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 32px;
+      align-items: center;
+    }
+
+    .record-type-chip {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--text);
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .record-type-chip.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #eef4ff;
+    }
+
+    .records-toolbar {
+      grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
+      align-items: end;
+    }
+
+    .records-query-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .records-upsert-form {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .records-full,
+    .records-form-actions {
+      grid-column: 1 / -1;
+    }
+
+    .records-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .records-table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .records-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .records-table th,
+    .records-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .records-table th {
+      background: #f3f5f8;
+      color: #374151;
+      font-weight: 800;
+    }
+
+    .records-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .records-row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .evolution-switch-row {
@@ -1092,6 +1336,266 @@
     .evolution-rule strong {
       display: block;
       margin-bottom: 6px;
+    }
+
+    .management-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .management-info {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: grid;
+      gap: 6px;
+      background: var(--surface);
+    }
+
+    .management-info strong,
+    .management-info code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .excel-preview-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .excel-preview-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .excel-preview-head strong,
+    .excel-sheet-head strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .excel-preview-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chat-interaction-card {
+      display: grid;
+      gap: 12px;
+      border: 1px solid #d9dde5;
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: #fbfbfc;
+    }
+
+    .chat-interaction-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chat-interaction-title {
+      display: grid;
+      gap: 3px;
+      min-width: min(100%, 360px);
+    }
+
+    .chat-interaction-actions,
+    .chat-interaction-status-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chat-interaction-status {
+      min-height: 28px;
+      border-radius: 6px;
+      padding: 5px 9px;
+      background: #eef4ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .chat-interaction-status.success {
+      background: #ecfdf3;
+      color: var(--success);
+    }
+
+    .chat-interaction-status.error {
+      background: #fff1f2;
+      color: var(--danger);
+    }
+
+    .chat-interaction-status.skipped {
+      background: #f2f3f5;
+      color: var(--muted);
+    }
+
+    .chat-interaction-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      line-height: 1.45;
+      background: #fff;
+    }
+
+    .chat-interaction-table th,
+    .chat-interaction-table td {
+      padding: 8px 10px;
+      border: 1px solid #d9dde5;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .chat-interaction-table th {
+      background: #f7f8fa;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .chat-interaction-table td {
+      min-width: 120px;
+    }
+
+    .chat-interaction-select {
+      min-width: 220px;
+      max-width: min(360px, 70vw);
+    }
+
+    .chat-interaction-thumb {
+      width: 56px;
+      height: 56px;
+      border: 1px solid #d9dde5;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #f3f5f8;
+      display: block;
+    }
+
+    .chat-interaction-sheet {
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid #d9dde5;
+      padding-top: 12px;
+    }
+
+    .excel-sheet {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid #d9dde5;
+      padding-top: 12px;
+    }
+
+    .excel-sheet-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .excel-header-list {
+      margin: 0;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .excel-header-chip {
+      min-height: 24px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 2px 7px;
+      background: #fff;
+      color: #1f2937;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .excel-classification {
+      display: grid;
+      gap: 8px;
+      border: 1px solid #d9dde5;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
+    }
+
+    .excel-classification.recognized {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .excel-classification.partial,
+    .excel-classification.ambiguous {
+      border-color: #fbbf24;
+      background: #fffbeb;
+    }
+
+    .excel-classification.unknown {
+      border-color: #fca5a5;
+      background: #fef2f2;
+    }
+
+    .excel-classification-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-weight: 800;
+    }
+
+    .excel-status-pill {
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      background: #ffffff;
+      border: 1px solid currentColor;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .excel-mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .excel-mini-table th,
+    .excel-mini-table td {
+      border: 1px solid #d9dde5;
+      padding: 5px 7px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .excel-mini-table th {
+      background: #eef2f7;
+      color: #1f2937;
+      font-weight: 800;
+    }
+
+    .management-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .dot {
@@ -1274,7 +1778,10 @@
     .conversation-list,
     .messages,
     .skills-list-pane,
-    .skills-content {
+    .skills-content,
+    .records-content,
+    .reference-content,
+    .management-content {
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-gutter: stable;
@@ -1286,7 +1793,10 @@
     .conversation-list::-webkit-scrollbar,
     .messages::-webkit-scrollbar,
     .skills-list-pane::-webkit-scrollbar,
-    .skills-content::-webkit-scrollbar {
+    .skills-content::-webkit-scrollbar,
+    .records-content::-webkit-scrollbar,
+    .reference-content::-webkit-scrollbar,
+    .management-content::-webkit-scrollbar {
       width: 9px;
     }
 
@@ -1294,7 +1804,10 @@
     .conversation-list::-webkit-scrollbar-track,
     .messages::-webkit-scrollbar-track,
     .skills-list-pane::-webkit-scrollbar-track,
-    .skills-content::-webkit-scrollbar-track {
+    .skills-content::-webkit-scrollbar-track,
+    .records-content::-webkit-scrollbar-track,
+    .reference-content::-webkit-scrollbar-track,
+    .management-content::-webkit-scrollbar-track {
       background: transparent;
     }
 
@@ -1302,7 +1815,10 @@
     .conversation-list::-webkit-scrollbar-thumb,
     .messages::-webkit-scrollbar-thumb,
     .skills-list-pane::-webkit-scrollbar-thumb,
-    .skills-content::-webkit-scrollbar-thumb {
+    .skills-content::-webkit-scrollbar-thumb,
+    .records-content::-webkit-scrollbar-thumb,
+    .reference-content::-webkit-scrollbar-thumb,
+    .management-content::-webkit-scrollbar-thumb {
       border: 2px solid transparent;
       border-radius: 8px;
       background: #b7bbc4;
@@ -1313,7 +1829,10 @@
     .conversation-list::-webkit-scrollbar-thumb:hover,
     .messages::-webkit-scrollbar-thumb:hover,
     .skills-list-pane::-webkit-scrollbar-thumb:hover,
-    .skills-content::-webkit-scrollbar-thumb:hover {
+    .skills-content::-webkit-scrollbar-thumb:hover,
+    .records-content::-webkit-scrollbar-thumb:hover,
+    .reference-content::-webkit-scrollbar-thumb:hover,
+    .management-content::-webkit-scrollbar-thumb:hover {
       background: #8f95a0;
       background-clip: padding-box;
     }
@@ -1441,15 +1960,35 @@
         grid-template-columns: 1fr;
       }
 
+      .management-grid {
+        grid-template-columns: 1fr;
+      }
+
       .chat-pane {
         min-height: 100vh;
       }
 
       .chat-header,
       .composer,
-      .skills-topbar {
+      .skills-topbar,
+      .records-topbar,
+      .reference-topbar,
+      .management-topbar {
         padding-left: 14px;
         padding-right: 14px;
+      }
+
+      .records-content,
+      .reference-content {
+        padding: 18px 14px 42px;
+      }
+
+      .records-toolbar,
+      .records-query-form,
+      .records-upsert-form,
+      .reference-source-form,
+      .reference-export-grid {
+        grid-template-columns: 1fr;
       }
 
       .messages {
@@ -1579,6 +2118,18 @@
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4H8zM4 14h7v6H4zM13 14h7v6h-7zM12 8v4M7.5 14v-2h9v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
             <span class="nav-text">技能</span>
           </button>
+          <button id="nav-management-button" class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM14 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="nav-text">管理配置</span>
+          </button>
+          <button id="nav-records-button" class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM8 9h8M8 13h8M8 17h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-text">资料管理</span>
+          </button>
+          <button id="nav-reference-button" class="nav-item" type="button">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h12v14H6zM9 8h6M9 12h6M9 16h3M17 19l3 2M17 5l3-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-text">参考商品</span>
+          </button>
           <button id="nav-evolution-button" class="nav-item" type="button" title="自我进化" aria-label="自我进化">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M3 12h4M17 12h4M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8M12 8l2 4-2 4-2-4 2-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="nav-text">自我进化</span>
@@ -1657,9 +2208,10 @@
 
           <form id="chat-form" class="composer">
             <div class="composer-toolbar">
-              <button class="icon-button" type="button" title="附件">
+              <button id="attachment-button" class="icon-button" type="button" title="上传 Excel">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12.5l5.8-5.8a3 3 0 0 1 4.2 4.2L9.5 19.5a5 5 0 0 1-7.1-7.1l8.5-8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
+              <input id="excel-file-input" type="file" accept=".xlsx,.xlsm,.xltx,.xltm" multiple hidden>
               <button id="toggle-thought-button" class="mode-button active" type="button" title="切换思考摘要">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4a3 3 0 0 0-3 3v1.2A3.5 3.5 0 0 0 7.5 15H9v-4M15 4a3 3 0 0 1 3 3v1.2A3.5 3.5 0 0 1 16.5 15H15v-4M9 15v2a3 3 0 0 0 6 0v-2M9 8h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -1747,6 +2299,287 @@
         </div>
       </section>
 
+      <section id="management-view" class="management-view" hidden>
+        <header class="management-topbar">
+          <div class="management-title-row">
+            <h2>管理配置</h2>
+            <div class="subtle">管理 Youbestar 服务启动、共享和本机运行状态。</div>
+          </div>
+        </header>
+
+        <main class="management-content">
+          <div class="management-panel">
+            <section class="doc-section">
+              <h1>局域网共享</h1>
+              <p>开启后，Youbestar 下次启动会监听所有网络接口，同一局域网内的 Windows 电脑可以使用本机 IPv4 和端口访问当前服务。</p>
+            </section>
+
+            <label class="evolution-switch-row" for="lan-share-toggle">
+              <div>
+                <strong>允许局域网访问</strong>
+                <div id="lan-share-status" class="subtle">正在读取服务配置...</div>
+              </div>
+              <span class="switch" aria-hidden="true">
+                <input id="lan-share-toggle" type="checkbox">
+                <span class="switch-track"></span>
+              </span>
+            </label>
+
+            <section class="management-grid">
+              <div class="management-info">
+                <div class="meta">本机访问地址</div>
+                <strong id="management-local-url">-</strong>
+              </div>
+              <div class="management-info">
+                <div class="meta">局域网访问地址</div>
+                <strong id="management-lan-url">-</strong>
+              </div>
+              <div class="management-info">
+                <div class="meta">当前监听</div>
+                <strong id="management-runtime">-</strong>
+              </div>
+              <div class="management-info">
+                <div class="meta">防火墙</div>
+                <strong id="management-firewall">-</strong>
+              </div>
+              <div class="management-info">
+                <div class="meta">服务配置文件</div>
+                <code id="management-config-path">-</code>
+              </div>
+              <div class="management-info">
+                <div class="meta">防火墙命令</div>
+                <code id="management-firewall-command">-</code>
+              </div>
+            </section>
+
+            <div class="management-actions">
+              <button id="restart-service-button" class="primary-button" type="button">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                重启服务
+              </button>
+              <button id="refresh-management-button" class="ghost-button" type="button">刷新状态</button>
+              <div id="management-status" class="status"></div>
+            </div>
+          </div>
+        </main>
+      </section>
+
+      <section id="records-view" class="records-view" hidden>
+        <header class="records-topbar">
+          <div class="records-title-row">
+            <h2>资料管理</h2>
+            <div class="subtle">维护可查询、可更新的共享办公资料。</div>
+          </div>
+        </header>
+
+        <main class="records-content">
+          <div class="records-panel">
+            <section class="doc-section">
+              <h1>共享办公资料库</h1>
+              <p>这里用于查看记录类型、检索共享资料、录入或修订单条业务记录；接口未启用时会保留操作入口并显示后端状态。</p>
+            </section>
+
+            <section class="records-types-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>记录类型</h2>
+                  <div class="subtle">选择类型后查询和保存都会带上当前记录类型。</div>
+                </div>
+                <button id="refresh-record-types-button" class="ghost-button" type="button">刷新类型</button>
+              </div>
+              <div id="record-types-list" class="records-type-list">
+                <div class="subtle">正在读取记录类型...</div>
+              </div>
+            </section>
+
+            <section class="records-toolbar">
+              <div class="field">
+                <label for="record-type-select">当前类型</label>
+                <select id="record-type-select">
+                  <option value="">全部类型</option>
+                </select>
+              </div>
+              <form id="records-query-form" class="records-query-form">
+                <div class="field">
+                  <label for="records-query-input">查询</label>
+                  <input id="records-query-input" type="search" placeholder="输入客户、货号、文件名、关键词...">
+                </div>
+                <button id="records-query-button" class="primary-button" type="submit">查询</button>
+              </form>
+            </section>
+
+            <section class="records-form-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>新增 / 修改记录</h2>
+                  <div class="subtle">填写记录 ID 可修改已有记录；留空则由后端创建或判断。</div>
+                </div>
+                <button id="clear-record-form-button" class="ghost-button" type="button">清空表单</button>
+              </div>
+              <form id="records-upsert-form" class="records-upsert-form">
+                <div class="field">
+                  <label for="record-id-input">记录 ID</label>
+                  <input id="record-id-input" type="text" placeholder="可选">
+                </div>
+                <div class="field">
+                  <label for="record-title-input">标题</label>
+                  <input id="record-title-input" type="text" placeholder="例如客户名、资料标题或 SKU" required>
+                </div>
+                <div class="field">
+                  <label for="record-source-input">来源</label>
+                  <input id="record-source-input" type="text" placeholder="例如手工录入、Excel、共享文件">
+                </div>
+                <div class="field records-full">
+                  <label for="record-content-input">内容</label>
+                  <textarea id="record-content-input" placeholder="输入结构化摘要、字段说明或需要共享的办公资料..." required></textarea>
+                </div>
+                <div class="field records-full">
+                  <label for="record-tags-input">标签</label>
+                  <input id="record-tags-input" type="text" placeholder="用逗号分隔，例如 报价, 客户, A系列">
+                </div>
+                <div class="records-form-actions">
+                  <button id="records-save-button" class="primary-button" type="submit">保存记录</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="records-table-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>最近记录</h2>
+                  <div id="records-result-summary" class="subtle">尚未查询。</div>
+                </div>
+                <button id="refresh-records-button" class="ghost-button" type="button">刷新记录</button>
+              </div>
+              <div class="records-table-wrap">
+                <table class="records-table">
+                  <thead>
+                    <tr>
+                      <th>类型</th>
+                      <th>标题</th>
+                      <th>摘要</th>
+                      <th>更新时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="records-table-body">
+                    <tr><td colspan="5" class="subtle">正在等待资料库接口。</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="records-status" class="status"></div>
+            </section>
+          </div>
+        </main>
+      </section>
+
+      <section id="reference-view" class="reference-view" hidden>
+        <header class="reference-topbar">
+          <div class="reference-title-row">
+            <h2>参考商品</h2>
+            <div class="subtle">读取 1688 参考商品，生成匹配候选并导出报价 Excel。</div>
+          </div>
+        </header>
+
+        <main class="reference-content">
+          <div class="reference-panel">
+            <section class="doc-section">
+              <h1>官方参考商品</h1>
+              <p>这里对接 <code>official.reference_product</code>：先读取参考商品，再按关键词生成候选，确认关联后可按内销或客户报价格式导出。</p>
+            </section>
+
+            <section class="reference-source-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>参考来源</h2>
+                  <div id="reference-cache-status" class="subtle">正在等待缓存状态。</div>
+                </div>
+                <button id="reference-cleanup-button" class="ghost-button" type="button">清理缓存</button>
+              </div>
+              <form id="reference-source-form" class="reference-source-form">
+                <div class="field">
+                  <label for="reference-url-input">1688 参考 URL</label>
+                  <input id="reference-url-input" type="url" placeholder="https://detail.1688.com/offer/..." autocomplete="off">
+                </div>
+                <div class="field">
+                  <label for="reference-keyword-input">商品 / 查询关键词</label>
+                  <input id="reference-keyword-input" type="search" placeholder="输入产品名称、SKU、款式或关键词" autocomplete="off">
+                </div>
+                <div class="reference-actions">
+                  <button id="reference-capture-button" class="primary-button" type="button">读取参考商品</button>
+                  <button id="reference-match-button" class="ghost-button" type="button">生成候选</button>
+                  <button id="reference-confirm-button" class="ghost-button" type="button">确认关联</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="reference-export-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>导出设置</h2>
+                  <div class="subtle">控制价格口径、数字格式和需要写入 Excel 的字段。</div>
+                </div>
+                <button id="reference-export-button" class="primary-button" type="button">导出 Excel</button>
+              </div>
+              <div class="reference-export-grid">
+                <div class="field">
+                  <label for="reference-export-mode-select">导出模式</label>
+                  <select id="reference-export-mode-select">
+                    <option value="internal">内部</option>
+                    <option value="customer">客户</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="reference-margin-input">利润率 %</label>
+                  <input id="reference-margin-input" type="number" min="0" step="0.1" value="0">
+                </div>
+                <div class="field">
+                  <label for="reference-decimals-input">小数位</label>
+                  <input id="reference-decimals-input" type="number" min="0" max="6" step="1" value="2">
+                </div>
+                <label class="reference-checkbox-row" for="reference-embed-images-checkbox">
+                  <input id="reference-embed-images-checkbox" type="checkbox" checked>
+                  嵌入图片
+                </label>
+                <div class="reference-field-list" aria-label="导出字段">
+                  <label class="reference-field-chip"><input class="reference-field-checkbox" type="checkbox" value="sku_name" checked>SKU 名称</label>
+                  <label class="reference-field-chip"><input class="reference-field-checkbox" type="checkbox" value="price" checked>价格</label>
+                  <label class="reference-field-chip"><input class="reference-field-checkbox" type="checkbox" value="image" checked>图片</label>
+                  <label class="reference-field-chip"><input class="reference-field-checkbox" type="checkbox" value="confidence" checked>匹配置信度</label>
+                  <label class="reference-field-chip"><input class="reference-field-checkbox" type="checkbox" value="source_url" checked>参考链接</label>
+                </div>
+              </div>
+            </section>
+
+            <section class="reference-results-section">
+              <div class="records-section-head">
+                <div>
+                  <h2>状态 / 候选结果</h2>
+                  <div id="reference-result-summary" class="subtle">尚未读取参考商品。</div>
+                </div>
+              </div>
+              <div class="records-table-wrap">
+                <table class="records-table">
+                  <thead>
+                    <tr>
+                      <th>选择</th>
+                      <th>SKU 名称</th>
+                      <th>价格</th>
+                      <th>图片</th>
+                      <th>匹配置信度</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reference-results-body">
+                    <tr><td colspan="5" class="subtle">等待参考商品接口返回候选。</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="reference-status" class="status"></div>
+            </section>
+          </div>
+        </main>
+      </section>
+
       <section id="evolution-view" class="evolution-view" hidden>
         <header class="evolution-topbar">
           <div class="evolution-title-row">
@@ -1814,11 +2647,25 @@
       ? window.location.origin
       : "http://127.0.0.1:8000";
     const CHAT_URL = `${API_ORIGIN}/chat`;
+    const EXCEL_PREVIEW_URL = `${API_ORIGIN}/files/excel/preview`;
+    const EXCEL_FEEDBACK_URL = `${API_ORIGIN}/files/excel/feedback`;
     const MEMORY_CONFIRM_URL = `${API_ORIGIN}/memory/confirm`;
     const MEMORY_REJECT_URL = `${API_ORIGIN}/memory/reject`;
     const CONFIG_URL = `${API_ORIGIN}/config`;
     const MODELS_DISCOVER_URL = `${API_ORIGIN}/models/discover`;
     const SELF_EVOLUTION_SETTINGS_URL = `${API_ORIGIN}/self-evolution/settings`;
+    const MANAGEMENT_SERVICE_URL = `${API_ORIGIN}/management/service`;
+    const MANAGEMENT_LAN_SHARE_URL = `${API_ORIGIN}/management/lan-share`;
+    const MANAGEMENT_RESTART_URL = `${API_ORIGIN}/management/restart`;
+    const RECORD_TYPES_URL = `${API_ORIGIN}/business-records/types`;
+    const RECORD_QUERY_URL = `${API_ORIGIN}/business-records/query`;
+    const RECORD_UPSERT_URL = `${API_ORIGIN}/business-records/upsert`;
+    const REFERENCE_CACHE_STATUS_URL = `${API_ORIGIN}/reference-products/cache/status`;
+    const REFERENCE_CAPTURE_URL = `${API_ORIGIN}/reference-products/capture`;
+    const REFERENCE_MATCH_URL = `${API_ORIGIN}/reference-products/match`;
+    const REFERENCE_CONFIRM_BIND_URL = `${API_ORIGIN}/reference-products/confirm-bind`;
+    const REFERENCE_EXPORT_EXCEL_URL = `${API_ORIGIN}/reference-products/export-excel`;
+    const REFERENCE_CACHE_CLEANUP_URL = `${API_ORIGIN}/reference-products/cache/cleanup`;
     const REGISTRY_URL = `${API_ORIGIN}/skills/registry`;
     const TOGGLE_URL = `${API_ORIGIN}/skills/toggle`;
     const APPROVALS_URL = `${API_ORIGIN}/skills/approvals`;
@@ -1846,9 +2693,15 @@
     const connectionStatus = document.getElementById("connection-status");
     const navChatButton = document.getElementById("nav-chat-button");
     const navSkillsButton = document.getElementById("nav-skills-button");
+    const navManagementButton = document.getElementById("nav-management-button");
+    const navRecordsButton = document.getElementById("nav-records-button");
+    const navReferenceButton = document.getElementById("nav-reference-button");
     const navEvolutionButton = document.getElementById("nav-evolution-button");
     const chatView = document.getElementById("chat-view");
     const skillsView = document.getElementById("skills-view");
+    const managementView = document.getElementById("management-view");
+    const recordsView = document.getElementById("records-view");
+    const referenceView = document.getElementById("reference-view");
     const evolutionView = document.getElementById("evolution-view");
     const conversationList = document.getElementById("conversation-list");
     const chatTitle = document.getElementById("chat-title");
@@ -1856,6 +2709,8 @@
     const chatForm = document.getElementById("chat-form");
     const input = document.getElementById("message-input");
     const sendButton = document.getElementById("send-button");
+    const attachmentButton = document.getElementById("attachment-button");
+    const excelFileInput = document.getElementById("excel-file-input");
     const memoryOverlay = document.getElementById("memory-overlay");
     const memoryFields = document.getElementById("memory-fields");
     const memoryStatus = document.getElementById("memory-status");
@@ -1871,6 +2726,51 @@
     const allowSkillLabel = document.getElementById("allow-skill-label");
     const allowSelfEvolutionToggle = document.getElementById("allow-self-evolution-toggle");
     const selfEvolutionStatus = document.getElementById("self-evolution-status");
+    const lanShareToggle = document.getElementById("lan-share-toggle");
+    const lanShareStatus = document.getElementById("lan-share-status");
+    const managementLocalUrl = document.getElementById("management-local-url");
+    const managementLanUrl = document.getElementById("management-lan-url");
+    const managementRuntime = document.getElementById("management-runtime");
+    const managementFirewall = document.getElementById("management-firewall");
+    const managementConfigPath = document.getElementById("management-config-path");
+    const managementFirewallCommand = document.getElementById("management-firewall-command");
+    const restartServiceButton = document.getElementById("restart-service-button");
+    const refreshManagementButton = document.getElementById("refresh-management-button");
+    const managementStatus = document.getElementById("management-status");
+    const recordTypesList = document.getElementById("record-types-list");
+    const recordTypeSelect = document.getElementById("record-type-select");
+    const refreshRecordTypesButton = document.getElementById("refresh-record-types-button");
+    const recordsQueryForm = document.getElementById("records-query-form");
+    const recordsQueryInput = document.getElementById("records-query-input");
+    const recordsQueryButton = document.getElementById("records-query-button");
+    const recordsUpsertForm = document.getElementById("records-upsert-form");
+    const recordIdInput = document.getElementById("record-id-input");
+    const recordTitleInput = document.getElementById("record-title-input");
+    const recordSourceInput = document.getElementById("record-source-input");
+    const recordContentInput = document.getElementById("record-content-input");
+    const recordTagsInput = document.getElementById("record-tags-input");
+    const clearRecordFormButton = document.getElementById("clear-record-form-button");
+    const recordsSaveButton = document.getElementById("records-save-button");
+    const refreshRecordsButton = document.getElementById("refresh-records-button");
+    const recordsResultSummary = document.getElementById("records-result-summary");
+    const recordsTableBody = document.getElementById("records-table-body");
+    const recordsStatus = document.getElementById("records-status");
+    const referenceUrlInput = document.getElementById("reference-url-input");
+    const referenceKeywordInput = document.getElementById("reference-keyword-input");
+    const referenceSourceForm = document.getElementById("reference-source-form");
+    const referenceCaptureButton = document.getElementById("reference-capture-button");
+    const referenceMatchButton = document.getElementById("reference-match-button");
+    const referenceConfirmButton = document.getElementById("reference-confirm-button");
+    const referenceCleanupButton = document.getElementById("reference-cleanup-button");
+    const referenceExportButton = document.getElementById("reference-export-button");
+    const referenceExportModeSelect = document.getElementById("reference-export-mode-select");
+    const referenceMarginInput = document.getElementById("reference-margin-input");
+    const referenceDecimalsInput = document.getElementById("reference-decimals-input");
+    const referenceEmbedImagesCheckbox = document.getElementById("reference-embed-images-checkbox");
+    const referenceCacheStatus = document.getElementById("reference-cache-status");
+    const referenceResultSummary = document.getElementById("reference-result-summary");
+    const referenceResultsBody = document.getElementById("reference-results-body");
+    const referenceStatus = document.getElementById("reference-status");
     const modeHint = document.getElementById("mode-hint");
     const backConfigButton = document.getElementById("back-config-button");
     const logoutButton = document.getElementById("logout-button");
@@ -1901,6 +2801,13 @@
     let configProfiles = [];
     let currentProfileId = "default";
     let isApplyingProfile = false;
+    let dragDepth = 0;
+    let recordTypesCache = [];
+    let recordsLoaded = false;
+    let referenceLoaded = false;
+    let referenceProductState = null;
+    let referenceCandidates = [];
+    let selectedReferenceCandidateId = "";
 
     function normalizeWireApi(value) {
       const cleanValue = String(value || "chat_completions").trim().toLowerCase().replaceAll("-", "_");
@@ -2484,12 +3391,18 @@
     function setActiveNav(active) {
       navChatButton.classList.toggle("active", active === "chat");
       navSkillsButton.classList.toggle("active", active === "skills");
+      navManagementButton.classList.toggle("active", active === "management");
+      navRecordsButton.classList.toggle("active", active === "records");
+      navReferenceButton.classList.toggle("active", active === "reference");
       navEvolutionButton.classList.toggle("active", active === "evolution");
     }
 
     function showChatView() {
       chatView.hidden = false;
       skillsView.hidden = true;
+      managementView.hidden = true;
+      recordsView.hidden = true;
+      referenceView.hidden = true;
       evolutionView.hidden = true;
       setActiveNav("chat");
       renderMessages();
@@ -2498,6 +3411,9 @@
     function showSkillsView() {
       chatView.hidden = true;
       skillsView.hidden = false;
+      managementView.hidden = true;
+      recordsView.hidden = true;
+      referenceView.hidden = true;
       evolutionView.hidden = true;
       setActiveNav("skills");
       loadSkills();
@@ -2508,8 +3424,53 @@
     function showEvolutionView() {
       chatView.hidden = true;
       skillsView.hidden = true;
+      managementView.hidden = true;
+      recordsView.hidden = true;
+      referenceView.hidden = true;
       evolutionView.hidden = false;
       setActiveNav("evolution");
+    }
+
+    function showManagementView() {
+      chatView.hidden = true;
+      skillsView.hidden = true;
+      managementView.hidden = false;
+      recordsView.hidden = true;
+      referenceView.hidden = true;
+      evolutionView.hidden = true;
+      setActiveNav("management");
+      loadManagementStatus();
+    }
+
+    function showRecordsView() {
+      chatView.hidden = true;
+      skillsView.hidden = true;
+      managementView.hidden = true;
+      recordsView.hidden = false;
+      referenceView.hidden = true;
+      evolutionView.hidden = true;
+      setActiveNav("records");
+      if (!recordsLoaded) {
+        recordsLoaded = true;
+        loadRecordTypes();
+        loadBusinessRecords();
+      }
+      recordsQueryInput.focus();
+    }
+
+    function showReferenceView() {
+      chatView.hidden = true;
+      skillsView.hidden = true;
+      managementView.hidden = true;
+      recordsView.hidden = true;
+      referenceView.hidden = false;
+      evolutionView.hidden = true;
+      setActiveNav("reference");
+      if (!referenceLoaded) {
+        referenceLoaded = true;
+        loadReferenceCacheStatus();
+      }
+      referenceUrlInput.focus();
     }
 
     function setConversationPaneCollapsed(collapsed) {
@@ -2612,7 +3573,10 @@
       const bubble = document.createElement("div");
       bubble.className = `bubble${message.error ? " error" : ""}`;
 
-      if (role === "assistant" && hasAgentTrace(message)) {
+      if (role === "assistant" && message.excel_preview) {
+        bubble.classList.add("assistant-rich");
+        renderExcelPreviewBubble(bubble, message);
+      } else if (role === "assistant" && hasAgentTrace(message)) {
         bubble.classList.add("assistant-rich");
         renderAssistantBubble(bubble, message);
       } else {
@@ -2642,6 +3606,8 @@
         message.action !== undefined ||
         message.params !== undefined ||
         message.action_result !== undefined ||
+        message.interactions !== undefined ||
+        message.interaction !== undefined ||
         message.response !== undefined
       );
     }
@@ -2649,16 +3615,19 @@
     function renderAssistantBubble(bubble, message) {
       bubble.innerHTML = "";
 
+      const hasInteractions = chatInteractionsForMessage(message).length > 0;
       if (message.pending) {
         appendReplyCard(bubble, "正在思考...", message);
       } else {
         const finalReply = message.response || message.reply || message.content || "";
         if (finalReply) {
           appendReplyCard(bubble, finalReply, message);
-        } else if (!showThoughtMode && !showToolMode) {
+        } else if (!showThoughtMode && !showToolMode && !hasInteractions) {
           appendReplyCard(bubble, message.allowChat === false ? "任务优先模式：无自然回复。" : "模型没有提供用户回复。", message);
         }
       }
+
+      renderChatInteractions(bubble, message);
 
       if (showThoughtMode) {
         const thought = message.pending ? "等待模型返回思考摘要..." : (message.thought || "");
@@ -2689,6 +3658,839 @@
         card.appendChild(timer);
       }
       parent.appendChild(card);
+    }
+
+    function excelPreviewContextText(preview) {
+      const data = preview?.data || {};
+      const sheets = Array.isArray(data.sheets) ? data.sheets : [];
+      const lines = [
+        `已读取 Excel 文件：${data.file_name || ""}`,
+        `保存路径：${data.saved_path || ""}`,
+        `工作表数：${sheets.length}`,
+      ];
+      sheets.slice(0, 4).forEach((sheet) => {
+        lines.push(`工作表：${sheet.name || "未命名工作表"}`);
+        lines.push(`表头行：${sheet.header_row || "-"}`);
+        const leadingRows = Array.isArray(sheet.leading_rows) ? sheet.leading_rows : [];
+        if (leadingRows.length) {
+          lines.push("表头前几行：");
+          leadingRows.slice(0, 8).forEach((row, index) => {
+            lines.push(`- 第${index + 1}行：${(Array.isArray(row) ? row : [row]).filter(Boolean).join(" | ")}`);
+          });
+        }
+        const headers = Array.isArray(sheet.headers) ? sheet.headers : [];
+        lines.push(`识别到的表头：${headers.join(" | ")}`);
+        const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+        if (rows.length) {
+          lines.push("表头后预览行：");
+          rows.slice(0, 5).forEach((row, index) => {
+            lines.push(`- 第${index + 1}行：${(Array.isArray(row) ? row : [row]).join(" | ")}`);
+          });
+        }
+      });
+      return lines.filter(Boolean).join("\n");
+    }
+
+    function messageContentForHistory(item) {
+      if (item.role === "assistant" && item.excel_preview) {
+        return [excelPreviewContextText(item.excel_preview), interactionContextText(item)].filter(Boolean).join("\n");
+      }
+      if (item.role === "assistant") {
+        return [item.response || item.model_reply || item.content || "", interactionContextText(item)].filter(Boolean).join("\n");
+      }
+      return item.content;
+    }
+
+    function interactionContextText(item) {
+      return chatInteractionsForMessage(item)
+        .map((interaction) => {
+          const state = interaction?.ui_state || {};
+          const title = interaction?.title || interaction?.kind || "交互确认";
+          return state.message ? `${title}：${state.message}` : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    function renderExcelPreviewBubble(bubble, message) {
+      bubble.innerHTML = "";
+      const preview = message.excel_preview || {};
+      const data = preview.data || {};
+      const sheets = Array.isArray(data.sheets) ? data.sheets : [];
+      const classificationSummary = data.classification_summary || {};
+      const statusCounts = classificationSummary.status_counts || {};
+      const card = document.createElement("div");
+      card.className = "reply-card excel-preview-card";
+
+      const head = document.createElement("div");
+      head.className = "excel-preview-head";
+      const info = document.createElement("div");
+      info.innerHTML = `
+        <strong>${escapeHtml(data.file_name || "Excel 文件")}</strong>
+        <div class="meta">保存路径：${escapeHtml(data.saved_path || "")}</div>
+        <div class="meta">工作表：${sheets.length} 个；已识别 ${escapeHtml(statusCounts.recognized || 0)} 个；未识别 ${escapeHtml(statusCounts.unknown || 0)} 个；待确认建议 ${escapeHtml(classificationSummary.change_proposal_count || 0)} 个。</div>
+      `;
+      const actions = document.createElement("div");
+      actions.className = "excel-preview-actions";
+      const hasRecognizedQuote = sheets.some((sheet) => sheet.classification?.status === "recognized" && sheet.classification?.category === "quote");
+      if (hasRecognizedQuote) {
+        const importButton = document.createElement("button");
+        importButton.className = "ghost-button";
+        importButton.type = "button";
+        importButton.textContent = "导入报价资料库";
+        importButton.addEventListener("click", () => {
+          const savedPath = data.saved_path || "";
+          if (!savedPath) return;
+          const ok = window.confirm("仅已识别为报价表的 Excel 才适合写入报价资料库。继续前请确认字段映射无误。");
+          if (!ok) return;
+          sendMessage(`请把这个已识别为报价表的 Excel 写入报价资料库：${savedPath}`);
+        });
+        actions.appendChild(importButton);
+      }
+      const previewButton = document.createElement("button");
+      previewButton.className = "ghost-button";
+      previewButton.type = "button";
+      previewButton.textContent = "让智能体分类归档";
+      previewButton.addEventListener("click", () => {
+        const savedPath = data.saved_path || "";
+        if (!savedPath) return;
+        const needsConfirmation = sheets.some((sheet) => sheet.classification?.needs_confirmation);
+        if (needsConfirmation) {
+          const ok = window.confirm("该 Excel 存在未识别、类型不明确或字段目录变更建议。Youbestar 会先列出确认项，不会静默新增或修改标准字段。继续？");
+          if (!ok) return;
+        }
+        sendMessage(`请按通用 Excel 表格处理分类系统分析这个文件，未识别的工作表要明确提示未识别，不要胡乱拼凑；字段目录新增或修改必须先询问我确认：${savedPath}`);
+      });
+      actions.appendChild(previewButton);
+      head.appendChild(info);
+      head.appendChild(actions);
+      card.appendChild(head);
+
+      sheets.forEach((sheet) => {
+        card.appendChild(buildExcelSheetPreview(sheet));
+      });
+
+      if (!sheets.length) {
+        const empty = document.createElement("div");
+        empty.className = "status error";
+        empty.textContent = "没有读取到可预览的工作表。";
+        card.appendChild(empty);
+      }
+
+      bubble.appendChild(card);
+      renderChatInteractions(bubble, message);
+    }
+
+    function chatInteractionsForMessage(message) {
+      if (!message || typeof message !== "object") return [];
+      if (Array.isArray(message.interactions)) return message.interactions;
+      if (message.interaction && typeof message.interaction === "object") return [message.interaction];
+      return [];
+    }
+
+    function normalizeChatInteractionStatus(interaction) {
+      if (!interaction || typeof interaction !== "object") return {};
+      interaction.ui_state = interaction.ui_state && typeof interaction.ui_state === "object" ? interaction.ui_state : {};
+      return interaction.ui_state;
+    }
+
+    function setChatInteractionStatus(message, interaction, status, text) {
+      const state = normalizeChatInteractionStatus(interaction);
+      state.status = status;
+      state.message = text || "";
+      saveStoredConversations();
+      renderMessages();
+    }
+
+    function renderChatInteractions(parent, message) {
+      const interactions = chatInteractionsForMessage(message);
+      interactions.forEach((interaction) => {
+        if (!interaction || typeof interaction !== "object") return;
+        if (interaction.kind === "reference_product_match_review") {
+          parent.appendChild(buildReferenceMatchInteractionCard(message, interaction));
+        } else if (interaction.kind === "excel_preview_review") {
+          parent.appendChild(buildExcelPreviewInteractionCard(message, interaction));
+        }
+      });
+    }
+
+    function buildInteractionShell(interaction) {
+      const card = document.createElement("div");
+      card.className = "chat-interaction-card";
+
+      const head = document.createElement("div");
+      head.className = "chat-interaction-head";
+      const title = document.createElement("div");
+      title.className = "chat-interaction-title";
+      title.innerHTML = `
+        <strong>${escapeHtml(interaction.title || "待确认")}</strong>
+        <div class="meta">${escapeHtml(interaction.description || "")}</div>
+      `;
+      const statusWrap = document.createElement("div");
+      statusWrap.className = "chat-interaction-status-row";
+      const state = normalizeChatInteractionStatus(interaction);
+      if (state.status || state.message) {
+        const status = document.createElement("div");
+        status.className = `chat-interaction-status ${escapeHtml(state.status || "")}`.trim();
+        status.textContent = state.message || state.status;
+        statusWrap.appendChild(status);
+      }
+      head.appendChild(title);
+      head.appendChild(statusWrap);
+      card.appendChild(head);
+      return card;
+    }
+
+    function chatCandidateLabel(candidate) {
+      const title = candidate?.title || candidate?.business_key || candidate?.record_id || candidate?.id || "候选资料";
+      const score = referenceConfidenceLabel(candidate?.confidence || candidate?.score || "");
+      return `${title}${score !== "-" ? ` · ${score}` : ""}`;
+    }
+
+    function buildReferenceMatchInteractionCard(message, interaction) {
+      const card = buildInteractionShell(interaction);
+      const items = Array.isArray(interaction.items) ? interaction.items : [];
+      const wrap = document.createElement("div");
+      wrap.className = "markdown-table-wrap";
+      const table = document.createElement("table");
+      table.className = "chat-interaction-table";
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>图片</th>
+            <th>候选资料</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+      `;
+      const tbody = document.createElement("tbody");
+      items.forEach((item) => {
+        const row = document.createElement("tr");
+        const candidates = Array.isArray(item.candidates) ? item.candidates : [];
+        const selected = item.selected_candidate_id || candidates[0]?.id || "";
+        item.selected_candidate_id = selected;
+        const select = document.createElement("select");
+        select.className = "chat-interaction-select";
+        select.dataset.sourceSkuId = item.source_sku_id || item.id || "";
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "不绑定 / 待人工处理";
+        select.appendChild(emptyOption);
+        candidates.forEach((candidate) => {
+          const option = document.createElement("option");
+          option.value = candidate.id || candidate.record_id || candidate.business_key || "";
+          option.textContent = chatCandidateLabel(candidate);
+          select.appendChild(option);
+        });
+        select.value = selected;
+        select.addEventListener("change", () => {
+          item.selected_candidate_id = select.value;
+          normalizeChatInteractionStatus(interaction).status = "pending";
+          normalizeChatInteractionStatus(interaction).message = "已更新选择，等待确认。";
+          saveStoredConversations();
+          renderMessages();
+        });
+
+        const imageCell = document.createElement("td");
+        if (item.image_url) {
+          const image = document.createElement("img");
+          image.className = "chat-interaction-thumb";
+          image.src = item.image_url;
+          image.alt = item.sku_name || "SKU 图片";
+          imageCell.appendChild(image);
+        } else {
+          imageCell.textContent = "-";
+        }
+
+        const skuCell = document.createElement("td");
+        skuCell.innerHTML = `
+          <strong>${escapeHtml(item.sku_name || item.sku || item.id || "-")}</strong>
+          <div class="meta">${escapeHtml(item.sku || item.source_sku_id || "")}</div>
+          <div class="meta">${escapeHtml(item.price === "" || item.price === undefined ? "" : `价格：${item.price}`)}</div>
+        `;
+        const selectCell = document.createElement("td");
+        selectCell.appendChild(select);
+        const statusCell = document.createElement("td");
+        statusCell.textContent = item.status || "-";
+        row.appendChild(skuCell);
+        row.appendChild(imageCell);
+        row.appendChild(selectCell);
+        row.appendChild(statusCell);
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      card.appendChild(wrap);
+
+      const actions = document.createElement("div");
+      actions.className = "chat-interaction-actions";
+      const confirmButton = document.createElement("button");
+      confirmButton.className = "primary-button";
+      confirmButton.type = "button";
+      confirmButton.textContent = "确认选中绑定";
+      confirmButton.addEventListener("click", () => confirmReferenceInteraction(message, interaction));
+      const skipButton = document.createElement("button");
+      skipButton.className = "ghost-button";
+      skipButton.type = "button";
+      skipButton.textContent = "跳过";
+      skipButton.addEventListener("click", () => setChatInteractionStatus(message, interaction, "skipped", "已跳过本次候选确认。"));
+      actions.appendChild(confirmButton);
+      actions.appendChild(skipButton);
+      card.appendChild(actions);
+      return card;
+    }
+
+    function selectedReferenceBindingsFromInteraction(interaction) {
+      const bindings = [];
+      (Array.isArray(interaction.items) ? interaction.items : []).forEach((item) => {
+        const candidates = Array.isArray(item.candidates) ? item.candidates : [];
+        const selectedId = item.selected_candidate_id || "";
+        const candidate = candidates.find((entry) => String(entry.id) === String(selectedId));
+        if (!candidate) return;
+        bindings.push({
+          record_id: candidate.record_id || candidate.id || "",
+          business_key: candidate.business_key || "",
+          sku: item.sku || item.source_sku_id || "",
+          source_sku_id: item.source_sku_id || item.id || "",
+          sku_name: item.sku_name || "",
+          image_url: item.image_url || "",
+          candidate,
+        });
+      });
+      return bindings.filter((binding) => binding.record_id || binding.business_key);
+    }
+
+    async function confirmReferenceInteraction(message, interaction) {
+      const bindings = selectedReferenceBindingsFromInteraction(interaction);
+      if (!bindings.length) {
+        setChatInteractionStatus(message, interaction, "error", "请先选择至少一个可绑定的资料库 SKU。");
+        return;
+      }
+      normalizeChatInteractionStatus(interaction).status = "pending";
+      normalizeChatInteractionStatus(interaction).message = "正在写入已确认的图片链接...";
+      saveStoredConversations();
+      renderMessages();
+      try {
+        const response = await fetch(REFERENCE_CONFIRM_BIND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            match_id: interaction.match_id || "",
+            capture_id: interaction.capture_id || "",
+            source_url: interaction.source_url || "",
+            bindings,
+            confirmed: true,
+          }),
+        });
+        const data = await readReferenceJson(response, "确认关联失败");
+        setChatInteractionStatus(message, interaction, "success", data.message || `已确认绑定 ${bindings.length} 条。`);
+      } catch (error) {
+        setChatInteractionStatus(message, interaction, "error", `确认失败：${error.message}`);
+      }
+    }
+
+    function buildExcelPreviewInteractionCard(message, interaction) {
+      const card = buildInteractionShell(interaction);
+      const sheets = Array.isArray(interaction.sheets) ? interaction.sheets : [];
+      const summary = document.createElement("div");
+      summary.className = "meta";
+      summary.textContent = `${interaction.file_name || "Excel 文件"}；${sheets.length} 个工作表可确认。`;
+      card.appendChild(summary);
+
+      sheets.forEach((sheet) => {
+        card.appendChild(buildExcelSheetInteraction(message, interaction, sheet));
+      });
+      return card;
+    }
+
+    function buildExcelSheetInteraction(message, interaction, sheet) {
+      const section = document.createElement("section");
+      section.className = "chat-interaction-sheet";
+      const head = document.createElement("div");
+      head.className = "excel-sheet-head";
+      head.innerHTML = `
+        <div>
+          <strong>${escapeHtml(sheet.name || "未命名工作表")}</strong>
+          <div class="meta">当前分类：${escapeHtml(sheet.category_label || "未识别")}；置信度：${escapeHtml(Math.round(Number(sheet.confidence || 0) * 100))}%</div>
+        </div>
+      `;
+      section.appendChild(head);
+
+      const controls = document.createElement("div");
+      controls.className = "chat-interaction-actions";
+      const categorySelect = document.createElement("select");
+      categorySelect.className = "chat-interaction-select";
+      const categories = excelCategoryOptions({
+        available_categories: sheet.available_categories || interaction.table_categories || [],
+      });
+      categories.forEach((category) => {
+        const option = document.createElement("option");
+        option.value = category.code;
+        option.textContent = `${category.label} (${category.code})`;
+        categorySelect.appendChild(option);
+      });
+      categorySelect.value = sheet.selected_category || sheet.category || "unknown";
+      categorySelect.addEventListener("change", () => {
+        sheet.selected_category = categorySelect.value;
+        normalizeChatInteractionStatus(interaction).status = "pending";
+        normalizeChatInteractionStatus(interaction).message = "已更新 Excel 分类选择，等待确认。";
+        saveStoredConversations();
+        renderMessages();
+      });
+      const confirmCategory = document.createElement("button");
+      confirmCategory.className = "primary-button";
+      confirmCategory.type = "button";
+      confirmCategory.textContent = "确认分类";
+      confirmCategory.addEventListener("click", () => confirmExcelCategoryInteraction(message, interaction, sheet));
+      controls.appendChild(categorySelect);
+      controls.appendChild(confirmCategory);
+      section.appendChild(controls);
+
+      const mappings = Array.isArray(sheet.field_mappings) ? sheet.field_mappings : [];
+      if (mappings.length) {
+        section.appendChild(buildExcelFieldMappingInteractionTable(message, interaction, sheet, mappings));
+      }
+      return section;
+    }
+
+    function buildExcelFieldMappingInteractionTable(message, interaction, sheet, mappings) {
+      const wrap = document.createElement("div");
+      wrap.className = "markdown-table-wrap";
+      const table = document.createElement("table");
+      table.className = "chat-interaction-table";
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>原始表头</th>
+            <th>标准字段</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+      `;
+      const tbody = document.createElement("tbody");
+      mappings.forEach((mapping) => {
+        const row = document.createElement("tr");
+        const sourceHeader = mapping.source_header || "";
+        const select = document.createElement("select");
+        select.className = "chat-interaction-select";
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "不映射 / 待确认";
+        select.appendChild(emptyOption);
+        excelStandardFieldOptions({
+          field_mappings: mappings,
+          standard_fields: interaction.standard_fields || [],
+        }).forEach((field) => {
+          const option = document.createElement("option");
+          option.value = field.code;
+          option.textContent = `${field.label} (${field.code})`;
+          select.appendChild(option);
+        });
+        select.value = mapping.selected_field || mapping.standard_field || "";
+        select.addEventListener("change", () => {
+          mapping.selected_field = select.value;
+          normalizeChatInteractionStatus(interaction).status = "pending";
+          normalizeChatInteractionStatus(interaction).message = "已更新字段映射选择，等待确认。";
+          saveStoredConversations();
+          renderMessages();
+        });
+        const headerCell = document.createElement("td");
+        headerCell.textContent = sourceHeader || "-";
+        const selectCell = document.createElement("td");
+        selectCell.appendChild(select);
+        const statusCell = document.createElement("td");
+        statusCell.textContent = excelMappingStatusLabel(mapping.status);
+        row.appendChild(headerCell);
+        row.appendChild(selectCell);
+        row.appendChild(statusCell);
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+
+      const actions = document.createElement("div");
+      actions.className = "chat-interaction-actions";
+      const button = document.createElement("button");
+      button.className = "primary-button";
+      button.type = "button";
+      button.textContent = "确认字段映射";
+      button.addEventListener("click", () => confirmExcelFieldMappingInteraction(message, interaction, sheet));
+      actions.appendChild(button);
+      const container = document.createElement("div");
+      container.appendChild(wrap);
+      container.appendChild(actions);
+      return container;
+    }
+
+    async function confirmExcelCategoryInteraction(message, interaction, sheet) {
+      const selectedCategory = sheet.selected_category || sheet.category || "";
+      if (!selectedCategory) {
+        setChatInteractionStatus(message, interaction, "error", "请先选择一个 Excel 分类。");
+        return;
+      }
+      await submitExcelInteractionFeedback(message, interaction, {
+        headers: Array.isArray(sheet.headers) ? sheet.headers : [],
+        sheet_name: sheet.name || "",
+        category: selectedCategory,
+        previous_category: sheet.category || "",
+        scope: "template",
+      });
+    }
+
+    async function confirmExcelFieldMappingInteraction(message, interaction, sheet) {
+      const fieldMappings = {};
+      (Array.isArray(sheet.field_mappings) ? sheet.field_mappings : []).forEach((mapping) => {
+        const sourceHeader = mapping.source_header || "";
+        const standardField = mapping.selected_field || mapping.standard_field || "";
+        if (sourceHeader && standardField) {
+          fieldMappings[sourceHeader] = standardField;
+        }
+      });
+      if (!Object.keys(fieldMappings).length) {
+        setChatInteractionStatus(message, interaction, "error", "请先选择至少一个字段映射。");
+        return;
+      }
+      await submitExcelInteractionFeedback(message, interaction, {
+        headers: Array.isArray(sheet.headers) ? sheet.headers : [],
+        sheet_name: sheet.name || "",
+        field_mappings: fieldMappings,
+        scope: "template",
+      });
+    }
+
+    async function submitExcelInteractionFeedback(message, interaction, payload) {
+      if (!Array.isArray(payload.headers) || !payload.headers.length) {
+        setChatInteractionStatus(message, interaction, "error", "缺少表头，无法保存 Excel 修正。");
+        return;
+      }
+      normalizeChatInteractionStatus(interaction).status = "pending";
+      normalizeChatInteractionStatus(interaction).message = "正在保存 Excel 确认结果...";
+      saveStoredConversations();
+      renderMessages();
+      try {
+        const response = await fetch(EXCEL_FEEDBACK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Excel 修正反馈保存失败");
+        }
+        setChatInteractionStatus(message, interaction, "success", `已保存 Excel 确认结果：${(data.saved || []).length} 条。`);
+      } catch (error) {
+        setChatInteractionStatus(message, interaction, "error", `保存失败：${error.message}`);
+      }
+    }
+
+    function buildExcelSheetPreview(sheet) {
+      const section = document.createElement("section");
+      section.className = "excel-sheet";
+      const headers = Array.isArray(sheet.headers) ? sheet.headers : [];
+      const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+
+      const head = document.createElement("div");
+      head.className = "excel-sheet-head";
+      head.innerHTML = `
+        <div>
+          <strong>${escapeHtml(sheet.name || "未命名工作表")}</strong>
+          <div class="meta">表头行：${escapeHtml(sheet.header_row || "-")}；总行数：${escapeHtml(sheet.total_rows || 0)}；总列数：${escapeHtml(sheet.total_columns || 0)}</div>
+        </div>
+        <div class="meta">已展示 ${escapeHtml(sheet.preview_row_count || rows.length)} 行</div>
+      `;
+      section.appendChild(head);
+      section.appendChild(buildExcelClassificationBlock(sheet));
+
+      const headerList = document.createElement("div");
+      headerList.className = "excel-header-list";
+      headers.forEach((header) => {
+        const chip = document.createElement("span");
+        chip.className = "excel-header-chip";
+        chip.textContent = header || "未命名列";
+        headerList.appendChild(chip);
+      });
+      section.appendChild(headerList);
+
+      if (headers.length && rows.length) {
+        section.appendChild(buildPlainTable(headers, rows));
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "subtle";
+        empty.textContent = "暂无可预览数据行。";
+        section.appendChild(empty);
+      }
+      return section;
+    }
+
+    function buildExcelClassificationBlock(sheet) {
+      const classification = sheet?.classification || {};
+      const block = document.createElement("div");
+      const status = classification?.status || "unknown";
+      block.className = `excel-classification ${status}`;
+      const statusLabels = {
+        recognized: "已识别",
+        partial: "部分识别",
+        ambiguous: "类型不明确",
+        unknown: "未识别",
+      };
+      const confidence = Number(classification?.confidence || 0);
+      const title = document.createElement("div");
+      title.className = "excel-classification-title";
+      title.innerHTML = `
+        <span>${escapeHtml(classification?.category_label || "未识别")}</span>
+        <span class="excel-status-pill">${escapeHtml(statusLabels[status] || status)} · ${escapeHtml(Math.round(confidence * 100))}%</span>
+      `;
+      block.appendChild(title);
+
+      const reasons = Array.isArray(classification?.reasons) ? classification.reasons : [];
+      if (reasons.length) {
+        const reason = document.createElement("div");
+        reason.className = "meta";
+        reason.textContent = reasons.join("；");
+        block.appendChild(reason);
+      }
+
+      const correctionActions = document.createElement("div");
+      correctionActions.className = "excel-preview-actions";
+      const categoryButton = document.createElement("button");
+      categoryButton.className = "ghost-button";
+      categoryButton.type = "button";
+      categoryButton.textContent = "修正分类";
+      categoryButton.addEventListener("click", () => correctExcelCategory(sheet));
+      const fieldButton = document.createElement("button");
+      fieldButton.className = "ghost-button";
+      fieldButton.type = "button";
+      fieldButton.textContent = "修正字段";
+      fieldButton.addEventListener("click", () => correctExcelFieldMapping(sheet));
+      correctionActions.appendChild(categoryButton);
+      correctionActions.appendChild(fieldButton);
+      block.appendChild(correctionActions);
+
+      const mappings = Array.isArray(classification?.field_mappings) ? classification.field_mappings : [];
+      if (mappings.length) {
+        block.appendChild(buildExcelMiniTable(
+          ["原始表头", "标准字段", "状态"],
+          mappings.map((mapping) => [
+            mapping.source_header || "-",
+            mapping.standard_label ? `${mapping.standard_label} / ${mapping.standard_field}` : "待确认",
+            excelMappingStatusLabel(mapping.status),
+          ]),
+        ));
+      }
+
+      const proposals = Array.isArray(classification?.change_proposals) ? classification.change_proposals : [];
+      if (proposals.length) {
+        const proposalNote = document.createElement("div");
+        proposalNote.className = "meta";
+        proposalNote.textContent = "字段目录新增或修改建议必须弹窗确认后才会生效。";
+        block.appendChild(proposalNote);
+        block.appendChild(buildExcelMiniTable(
+          ["原始表头", "建议编码", "中文名"],
+          proposals.map((proposal) => [
+            proposal.source_header || "-",
+            proposal.suggested_field || proposal.type || "-",
+            proposal.standard_label || "待用户选择",
+          ]),
+        ));
+      }
+      return block;
+    }
+
+    function excelCategoryOptions(classification) {
+      const available = Array.isArray(classification?.available_categories) ? classification.available_categories : [];
+      const base = available.length ? available : [
+        { code: "quote", label: "报价表" },
+        { code: "order", label: "订单表" },
+        { code: "inventory", label: "库存表" },
+        { code: "customer", label: "客户表" },
+        { code: "product", label: "商品资料表" },
+        { code: "purchase", label: "采购表" },
+        { code: "finance", label: "财务表" },
+        { code: "logistics", label: "物流表" },
+      ];
+      return [...base, { code: "unknown", label: "未识别" }];
+    }
+
+    async function correctExcelCategory(sheet) {
+      const headers = Array.isArray(sheet?.headers) ? sheet.headers : [];
+      if (!headers.length) return;
+      const options = excelCategoryOptions(sheet.classification);
+      const optionText = options.map((item, index) => `${index + 1}. ${item.label} (${item.code})`).join("\n");
+      const answer = window.prompt(`当前分类：${sheet.classification?.category_label || "未识别"}\n请选择正确分类编号：\n${optionText}`, "");
+      if (!answer) return;
+      const selected = options[Number(answer.trim()) - 1] || options.find((item) => item.code === answer.trim());
+      if (!selected) {
+        window.alert("没有找到这个分类，请重新选择。");
+        return;
+      }
+      const scopeOk = window.confirm("是否记住到同类表头模板？确定=同类表头以后沿用；取消=不保存。");
+      if (!scopeOk) return;
+      await saveExcelFeedback({
+        headers,
+        sheet_name: sheet.name || "",
+        category: selected.code,
+        previous_category: sheet.classification?.category || "",
+        scope: "template",
+      });
+    }
+
+    async function correctExcelFieldMapping(sheet) {
+      const headers = Array.isArray(sheet?.headers) ? sheet.headers : [];
+      const mappings = Array.isArray(sheet?.classification?.field_mappings) ? sheet.classification.field_mappings : [];
+      if (!headers.length || !mappings.length) return;
+      const headerText = headers.map((header, index) => `${index + 1}. ${header}`).join("\n");
+      const headerAnswer = window.prompt(`请选择要修正的字段编号：\n${headerText}`, "");
+      if (!headerAnswer) return;
+      const sourceHeader = headers[Number(headerAnswer.trim()) - 1] || headerAnswer.trim();
+      if (!headers.includes(sourceHeader)) {
+        window.alert("没有找到这个表头，请重新选择。");
+        return;
+      }
+      const fields = excelStandardFieldOptions(sheet.classification);
+      const fieldText = fields.map((field, index) => `${index + 1}. ${field.label} (${field.code})`).join("\n");
+      const fieldAnswer = window.prompt(`原始表头：${sourceHeader}\n请选择正确标准字段编号或输入字段编码：\n${fieldText}`, "");
+      if (!fieldAnswer) return;
+      const selected = fields[Number(fieldAnswer.trim()) - 1] || fields.find((field) => field.code === fieldAnswer.trim());
+      if (!selected) {
+        window.alert("没有找到这个标准字段，请先让 Youbestar 提出新增字段建议。");
+        return;
+      }
+      const globalOk = window.confirm("是否把这个表头映射记为全局别名？确定=以后相同表头都沿用；取消=仅同类表头模板沿用。");
+      await saveExcelFeedback({
+        headers,
+        sheet_name: sheet.name || "",
+        field_mappings: { [sourceHeader]: selected.code },
+        scope: globalOk ? "global" : "template",
+      });
+    }
+
+    function excelStandardFieldOptions(classification) {
+      const fields = [];
+      const seen = new Set();
+      const standardFields = Array.isArray(classification?.standard_fields) ? classification.standard_fields : [];
+      standardFields.forEach((field) => {
+        if (field.code && !seen.has(field.code)) {
+          fields.push({ code: field.code, label: field.label || field.code });
+          seen.add(field.code);
+        }
+      });
+      const mappings = Array.isArray(classification?.field_mappings) ? classification.field_mappings : [];
+      mappings.forEach((mapping) => {
+        if (mapping.standard_field && !seen.has(mapping.standard_field)) {
+          fields.push({ code: mapping.standard_field, label: mapping.standard_label || mapping.standard_field });
+          seen.add(mapping.standard_field);
+        }
+        (mapping.candidates || []).forEach((candidate) => {
+          if (candidate.standard_field && !seen.has(candidate.standard_field)) {
+            fields.push({ code: candidate.standard_field, label: candidate.standard_label || candidate.standard_field });
+            seen.add(candidate.standard_field);
+          }
+        });
+      });
+      [
+        ["product_code", "商品编码"],
+        ["product_name", "商品名称"],
+        ["sku_code", "规格编码"],
+        ["short_name", "商品简称"],
+        ["toy_type", "玩具类型"],
+        ["standard_price", "标准售价"],
+        ["wholesale_price", "批发价"],
+        ["unit_price", "单价"],
+        ["cost_unit_price", "成本单价"],
+        ["customer_name", "客户名称"],
+        ["supplier_name", "供应商名称"],
+        ["quantity", "数量"],
+        ["amount", "金额"],
+        ["remark", "备注"],
+      ].forEach(([code, label]) => {
+        if (!seen.has(code)) {
+          fields.push({ code, label });
+          seen.add(code);
+        }
+      });
+      return fields;
+    }
+
+    async function saveExcelFeedback(payload) {
+      const ok = window.confirm("确认保存这次 Excel 修正？保存后 Youbestar 下次读取同类表头会优先采用。");
+      if (!ok) return;
+      try {
+        const response = await fetch(EXCEL_FEEDBACK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Excel 修正反馈保存失败");
+        }
+        window.alert(`已保存 Excel 修正反馈：${(data.saved || []).length} 条。重新上传或重新预览同类表头时会优先采用。`);
+      } catch (error) {
+        window.alert(`保存失败：${error.message}`);
+      }
+    }
+
+    function excelMappingStatusLabel(status) {
+      return {
+        mapped: "已映射",
+        ambiguous: "待确认",
+        unmapped: "未映射",
+      }[status] || (status || "-");
+    }
+
+    function buildExcelMiniTable(headers, rows) {
+      const table = document.createElement("table");
+      table.className = "excel-mini-table";
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+      const headRow = document.createElement("tr");
+      headers.forEach((header) => {
+        const th = document.createElement("th");
+        th.textContent = header;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        headers.forEach((_, index) => {
+          const td = document.createElement("td");
+          td.textContent = Array.isArray(row) ? (row[index] || "") : "";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      return table;
+    }
+
+    function buildPlainTable(headers, rows) {
+      const wrap = document.createElement("div");
+      wrap.className = "markdown-table-wrap";
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+      const headRow = document.createElement("tr");
+      headers.forEach((header) => {
+        const th = document.createElement("th");
+        th.textContent = header || "未命名列";
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        headers.forEach((_, index) => {
+          const td = document.createElement("td");
+          td.textContent = Array.isArray(row) ? (row[index] || "") : "";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      return wrap;
     }
 
     function renderMarkdown(parent, text) {
@@ -3011,6 +4813,794 @@
       }
     }
 
+    function setManagementStatus(message, type = "") {
+      managementStatus.textContent = message;
+      managementStatus.className = `status ${type}`.trim();
+    }
+
+    function renderManagementStatus(data) {
+      lanShareToggle.checked = Boolean(data.lan_share_enabled);
+      const runtimeHost = data.runtime_host || data.host || "未知";
+      const runtimePort = data.runtime_port || data.port || "";
+      const desired = data.lan_share_enabled ? "已开启" : "已关闭";
+      const restartText = data.restart_required ? "，需要重启服务生效" : "";
+      lanShareStatus.textContent = `当前${desired}${restartText}。`;
+      managementLocalUrl.textContent = data.local_url || "-";
+      managementLanUrl.textContent = data.lan_share_enabled ? (data.lan_url || "-") : "未开启";
+      managementRuntime.textContent = `${runtimeHost}:${runtimePort}`;
+      managementConfigPath.textContent = data.config_path || "-";
+      managementFirewallCommand.textContent = data.firewall_command || "-";
+
+      const firewall = data.firewall || {};
+      if (!data.lan_share_enabled) {
+        managementFirewall.textContent = "局域网共享关闭，未要求入站访问";
+      } else {
+        managementFirewall.textContent = firewall.allowed
+          ? `${firewall.rule_name || "YouBestar LAN"} 已允许`
+          : (firewall.message || "未确认");
+      }
+
+      restartServiceButton.disabled = false;
+    }
+
+    async function loadManagementStatus() {
+      setManagementStatus("正在读取服务状态...");
+      lanShareToggle.disabled = true;
+      restartServiceButton.disabled = true;
+      try {
+        const response = await fetch(MANAGEMENT_SERVICE_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取服务状态失败");
+        }
+        renderManagementStatus(data);
+        setManagementStatus(data.restart_required ? "配置已保存，重启服务后生效。" : "服务状态已刷新。", data.restart_required ? "" : "success");
+      } catch (error) {
+        setManagementStatus(`读取失败：${error.message}`, "error");
+      } finally {
+        lanShareToggle.disabled = false;
+        restartServiceButton.disabled = false;
+      }
+    }
+
+    async function saveLanShareSettings() {
+      const enabled = lanShareToggle.checked;
+      lanShareToggle.disabled = true;
+      restartServiceButton.disabled = true;
+      setManagementStatus(enabled ? "正在开启局域网共享..." : "正在关闭局域网共享...");
+      try {
+        const response = await fetch(MANAGEMENT_LAN_SHARE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "保存局域网共享配置失败");
+        }
+        renderManagementStatus(data);
+        setManagementStatus("配置已记住，下次启动会沿用；现在请重启服务生效。", "success");
+      } catch (error) {
+        lanShareToggle.checked = !enabled;
+        setManagementStatus(`保存失败：${error.message}`, "error");
+        await loadManagementStatus();
+      } finally {
+        lanShareToggle.disabled = false;
+        restartServiceButton.disabled = false;
+      }
+    }
+
+    async function restartService() {
+      restartServiceButton.disabled = true;
+      lanShareToggle.disabled = true;
+      setManagementStatus("正在创建重启任务，服务会短暂断开...");
+      try {
+        const response = await fetch(MANAGEMENT_RESTART_URL, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "重启服务失败");
+        }
+        setManagementStatus("重启任务已创建，请稍等新窗口启动并查看日志。", "success");
+      } catch (error) {
+        setManagementStatus(`重启失败：${error.message}`, "error");
+        restartServiceButton.disabled = false;
+        lanShareToggle.disabled = false;
+      }
+    }
+
+    function setRecordsStatus(message, type = "") {
+      recordsStatus.textContent = message;
+      recordsStatus.className = `status ${type}`.trim();
+    }
+
+    function normalizeRecordType(type) {
+      if (typeof type === "string") {
+        return { value: type, label: type, count: null };
+      }
+      const value = String(type?.value || type?.name || type?.type || type?.id || "").trim();
+      return {
+        value,
+        label: String(type?.label || type?.title || type?.name || value || "未命名类型"),
+        count: Number.isFinite(type?.count) ? type.count : null,
+      };
+    }
+
+    function renderRecordTypes(types) {
+      recordTypesCache = (types || []).map(normalizeRecordType).filter((type) => type.value);
+      const currentValue = recordTypeSelect.value;
+      recordTypeSelect.innerHTML = '<option value="">全部类型</option>';
+      recordTypesCache.forEach((type) => {
+        const option = document.createElement("option");
+        option.value = type.value;
+        option.textContent = type.label;
+        recordTypeSelect.appendChild(option);
+      });
+      if (recordTypesCache.some((type) => type.value === currentValue)) {
+        recordTypeSelect.value = currentValue;
+      }
+
+      recordTypesList.innerHTML = "";
+      if (!recordTypesCache.length) {
+        recordTypesList.innerHTML = '<div class="subtle">暂无记录类型；后端可通过 /business-records/types 返回类型列表。</div>';
+        return;
+      }
+
+      recordTypesCache.forEach((type) => {
+        const button = document.createElement("button");
+        button.className = `record-type-chip${recordTypeSelect.value === type.value ? " active" : ""}`;
+        button.type = "button";
+        button.textContent = type.count === null ? type.label : `${type.label} ${type.count}`;
+        button.addEventListener("click", () => {
+          recordTypeSelect.value = type.value;
+          renderRecordTypes(recordTypesCache);
+          loadBusinessRecords();
+        });
+        recordTypesList.appendChild(button);
+      });
+    }
+
+    async function loadRecordTypes() {
+      recordTypesList.innerHTML = '<div class="subtle">正在读取记录类型...</div>';
+      refreshRecordTypesButton.disabled = true;
+      try {
+        const response = await fetch(RECORD_TYPES_URL);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "读取记录类型失败");
+        }
+        renderRecordTypes(data.types || data.record_types || data.rows || []);
+        setRecordsStatus("记录类型已刷新。", "success");
+      } catch (error) {
+        recordTypesList.innerHTML = '<div class="subtle">记录类型接口暂不可用。</div>';
+        setRecordsStatus(`记录类型读取失败：${error.message}`, "error");
+      } finally {
+        refreshRecordTypesButton.disabled = false;
+      }
+    }
+
+    function recordValue(record, keys, fallback = "") {
+      for (const key of keys) {
+        if (record && record[key] !== undefined && record[key] !== null && record[key] !== "") {
+          return record[key];
+        }
+      }
+      return fallback;
+    }
+
+    function normalizeBusinessRecord(record) {
+      const data = record?.data && typeof record.data === "object" ? record.data : {};
+      return {
+        id: String(recordValue(record, ["id", "record_id", "key"], "")),
+        type: String(recordValue(record, ["type", "record_type", "kind"], data.type || recordTypeSelect.value || "-")),
+        title: String(recordValue(record, ["title", "name", "subject"], data.title || data.name || "未命名记录")),
+        summary: String(recordValue(record, ["summary", "content", "description", "text"], data.summary || data.content || "")),
+        source: String(recordValue(record, ["source", "origin"], data.source || "")),
+        tags: recordValue(record, ["tags"], data.tags || []),
+        updatedAt: String(recordValue(record, ["updated_at", "updatedAt", "modified_at", "created_at"], "")),
+        raw: record,
+      };
+    }
+
+    function renderBusinessRecords(records, summaryText = "") {
+      const normalizedRecords = (records || []).map(normalizeBusinessRecord);
+      recordsResultSummary.textContent = summaryText || `共 ${normalizedRecords.length} 条记录。`;
+      recordsTableBody.innerHTML = "";
+
+      if (!normalizedRecords.length) {
+        recordsTableBody.innerHTML = '<tr><td colspan="5" class="subtle">暂无匹配记录。</td></tr>';
+        return;
+      }
+
+      normalizedRecords.forEach((record) => {
+        const row = document.createElement("tr");
+        const tags = Array.isArray(record.tags) ? record.tags.join(", ") : String(record.tags || "");
+        row.innerHTML = `
+          <td>${escapeHtml(record.type || "-")}</td>
+          <td><strong>${escapeHtml(record.title)}</strong><div class="meta">${escapeHtml(record.id || "无 ID")}</div></td>
+          <td>${escapeHtml(record.summary || record.source || tags || "-")}</td>
+          <td>${escapeHtml(record.updatedAt || "-")}</td>
+          <td><div class="records-row-actions"></div></td>
+        `;
+        const actions = row.querySelector(".records-row-actions");
+        const editButton = document.createElement("button");
+        editButton.className = "ghost-button";
+        editButton.type = "button";
+        editButton.textContent = "编辑";
+        editButton.addEventListener("click", () => fillRecordForm(record));
+        actions.appendChild(editButton);
+        recordsTableBody.appendChild(row);
+      });
+    }
+
+    async function loadBusinessRecords() {
+      recordsQueryButton.disabled = true;
+      refreshRecordsButton.disabled = true;
+      setRecordsStatus("正在查询资料库...");
+      const payload = {
+        type: recordTypeSelect.value || "",
+        query: recordsQueryInput.value.trim(),
+        limit: 20,
+      };
+      try {
+        const response = await fetch(RECORD_QUERY_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "查询资料库失败");
+        }
+        const records = data.records || data.rows || data.items || [];
+        renderBusinessRecords(records, data.summary || "");
+        setRecordsStatus("资料库记录已刷新。", "success");
+      } catch (error) {
+        renderBusinessRecords([], "资料库接口暂不可用。");
+        setRecordsStatus(`查询失败：${error.message}`, "error");
+      } finally {
+        recordsQueryButton.disabled = false;
+        refreshRecordsButton.disabled = false;
+      }
+    }
+
+    function clearRecordForm() {
+      recordsUpsertForm.reset();
+      recordIdInput.value = "";
+      recordTitleInput.focus();
+    }
+
+    function fillRecordForm(record) {
+      recordIdInput.value = record.id || "";
+      recordTitleInput.value = record.title || "";
+      recordSourceInput.value = record.source || "";
+      recordContentInput.value = record.summary || "";
+      recordTagsInput.value = Array.isArray(record.tags) ? record.tags.join(", ") : String(record.tags || "");
+      if (record.type && recordTypesCache.some((type) => type.value === record.type)) {
+        recordTypeSelect.value = record.type;
+        renderRecordTypes(recordTypesCache);
+      }
+      recordTitleInput.focus();
+    }
+
+    function buildRecordPayload() {
+      return {
+        id: recordIdInput.value.trim(),
+        type: recordTypeSelect.value || "",
+        title: recordTitleInput.value.trim(),
+        source: recordSourceInput.value.trim(),
+        content: recordContentInput.value.trim(),
+        tags: recordTagsInput.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+      };
+    }
+
+    async function saveBusinessRecord() {
+      const payload = buildRecordPayload();
+      if (!payload.title || !payload.content) {
+        setRecordsStatus("请填写标题和内容。", "error");
+        return;
+      }
+
+      recordsSaveButton.disabled = true;
+      setRecordsStatus("正在保存记录...");
+      try {
+        const response = await fetch(RECORD_UPSERT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "保存记录失败");
+        }
+        setRecordsStatus(data.message || "记录已保存。", "success");
+        clearRecordForm();
+        await loadRecordTypes();
+        await loadBusinessRecords();
+      } catch (error) {
+        setRecordsStatus(`保存失败：${error.message}`, "error");
+      } finally {
+        recordsSaveButton.disabled = false;
+      }
+    }
+
+    function setReferenceStatus(message, type = "") {
+      referenceStatus.textContent = message;
+      referenceStatus.className = `status ${type}`.trim();
+    }
+
+    function setReferenceBusy(busy) {
+      [
+        referenceCaptureButton,
+        referenceMatchButton,
+        referenceConfirmButton,
+        referenceCleanupButton,
+        referenceExportButton,
+      ].forEach((button) => {
+        button.disabled = busy;
+      });
+    }
+
+    async function readReferenceJson(response, fallbackMessage) {
+      const text = await response.text();
+      let data = {};
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: text };
+        }
+      }
+      if (!response.ok) {
+        const detail = data.detail || data.message || fallbackMessage;
+        throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      }
+      return data;
+    }
+
+    function referenceSourcePayload() {
+      const referenceUrl = referenceUrlInput.value.trim();
+      const keyword = referenceKeywordInput.value.trim();
+      return {
+        reference_url: referenceUrl,
+        url: referenceUrl,
+        keyword,
+        query: keyword,
+      };
+    }
+
+    function referenceExportPayload() {
+      const selectedCandidate = getSelectedReferenceCandidate();
+      const fields = Array.from(document.querySelectorAll(".reference-field-checkbox:checked"))
+        .map((checkbox) => checkbox.value);
+      return {
+        ...referenceSourcePayload(),
+        reference_product: referenceProductState,
+        candidate_id: selectedCandidate?.id || "",
+        candidate: selectedCandidate?.raw || null,
+        export_mode: referenceExportModeSelect.value,
+        mode: referenceExportModeSelect.value,
+        margin_percent: Number(referenceMarginInput.value || 0),
+        decimal_places: Number(referenceDecimalsInput.value || 0),
+        embed_images: referenceEmbedImagesCheckbox.checked,
+        fields,
+      };
+    }
+
+    function referenceBindPayload(selectedCandidate) {
+      const raw = selectedCandidate?.raw || {};
+      const candidate = referenceValue(raw, ["best_candidate", "candidate"], null);
+      const recordId = referenceValue(candidate || raw, ["record_id", "id"], "");
+      const sku = referenceValue(raw, ["sku", "sku_code", "source_sku_id", "sku_id"], selectedCandidate?.id || "");
+      const sourceSkuId = referenceValue(raw, ["source_sku_id", "sku_id"], selectedCandidate?.id || "");
+      const imageUrl = selectedCandidate?.imageUrl || referenceImageUrl(raw);
+      return {
+        ...referenceSourcePayload(),
+        reference_product: referenceProductState,
+        candidate_id: selectedCandidate?.id || "",
+        candidate: raw,
+        bindings: recordId ? [{
+          record_id: recordId,
+          sku,
+          source_sku_id: sourceSkuId,
+          sku_name: selectedCandidate?.name || "",
+          image_url: imageUrl,
+          candidate: candidate || raw,
+        }] : [],
+        record_id: recordId,
+        sku,
+        source_sku_id: sourceSkuId,
+        sku_name: selectedCandidate?.name || "",
+        image_url: imageUrl,
+        confirmed: true,
+      };
+    }
+
+    function firstReferenceArray(data) {
+      const containers = [data, data?.data, data?.result, data?.payload].filter(Boolean);
+      const keys = ["candidates", "matches", "rows", "items", "results", "products", "skus"];
+      for (const container of containers) {
+        if (Array.isArray(container)) {
+          return container;
+        }
+        for (const key of keys) {
+          if (Array.isArray(container[key])) {
+            return container[key];
+          }
+        }
+      }
+      return [];
+    }
+
+    function firstReferenceObject(data) {
+      const containers = [data, data?.data, data?.result, data?.payload].filter(Boolean);
+      const keys = ["reference_product", "product", "item", "offer", "capture", "sku"];
+      for (const container of containers) {
+        for (const key of keys) {
+          if (container[key] && typeof container[key] === "object" && !Array.isArray(container[key])) {
+            return container[key];
+          }
+        }
+      }
+      return null;
+    }
+
+    function referenceValue(record, keys, fallback = "") {
+      const nestedKeys = ["sku", "product", "item", "reference_product", "match", "candidate"];
+      for (const key of keys) {
+        if (record && record[key] !== undefined && record[key] !== null && record[key] !== "") {
+          return record[key];
+        }
+      }
+      for (const nestedKey of nestedKeys) {
+        const nested = record?.[nestedKey];
+        if (!nested || typeof nested !== "object" || Array.isArray(nested)) {
+          continue;
+        }
+        for (const key of keys) {
+          if (nested[key] !== undefined && nested[key] !== null && nested[key] !== "") {
+            return nested[key];
+          }
+        }
+      }
+      return fallback;
+    }
+
+    function referenceImageUrl(record) {
+      const direct = referenceValue(record, [
+        "image_url",
+        "image",
+        "thumb",
+        "thumbnail",
+        "img_url",
+        "sku_image_url",
+        "pic_url",
+        "picture",
+      ], "");
+      if (direct) {
+        return String(direct);
+      }
+      const images = referenceValue(record, ["images", "image_urls", "pictures"], []);
+      if (Array.isArray(images) && images.length) {
+        const firstImage = images[0];
+        return typeof firstImage === "string"
+          ? firstImage
+          : String(firstImage?.url || firstImage?.image_url || "");
+      }
+      return "";
+    }
+
+    function normalizeReferenceCandidate(record, index) {
+      const id = String(referenceValue(record, [
+        "id",
+        "candidate_id",
+        "sku_id",
+        "sku",
+        "sku_code",
+        "product_id",
+        "offer_id",
+      ], `candidate-${index}`));
+      const name = String(referenceValue(record, [
+        "sku_name",
+        "matched_sku_name",
+        "product_name",
+        "item_name",
+        "name",
+        "title",
+        "subject",
+      ], "未命名 SKU"));
+      const price = referenceValue(record, [
+        "price",
+        "unit_price",
+        "final_price",
+        "matched_price",
+        "sale_price",
+        "offer_price",
+        "reference_price",
+      ], "");
+      const confidence = referenceValue(record, [
+        "confidence",
+        "match_confidence",
+        "score",
+        "similarity",
+      ], "");
+      return {
+        id,
+        name,
+        price,
+        imageUrl: referenceImageUrl(record),
+        confidence,
+        raw: record,
+      };
+    }
+
+    function referenceConfidenceLabel(value) {
+      if (value === "" || value === null || value === undefined) {
+        return "-";
+      }
+      const numberValue = Number(value);
+      if (Number.isFinite(numberValue)) {
+        const percent = numberValue <= 1 ? numberValue * 100 : numberValue;
+        return `${percent.toFixed(percent % 1 === 0 ? 0 : 1)}%`;
+      }
+      return String(value);
+    }
+
+    function renderReferenceCacheStatus(data) {
+      const count = data.count ?? data.cache_count ?? data.total ?? data.items_count;
+      const updatedAt = data.updated_at || data.last_updated || data.modified_at || "";
+      const base = data.message || data.status || (count !== undefined ? `缓存 ${count} 条` : "缓存状态已刷新");
+      referenceCacheStatus.textContent = updatedAt ? `${base}，更新时间 ${updatedAt}` : `${base}。`;
+    }
+
+    function renderReferenceCandidates(candidates, summaryText = "") {
+      referenceCandidates = (candidates || []).map(normalizeReferenceCandidate);
+      if (!referenceCandidates.some((candidate) => candidate.id === selectedReferenceCandidateId)) {
+        selectedReferenceCandidateId = referenceCandidates[0]?.id || "";
+      }
+      referenceResultSummary.textContent = summaryText || `共 ${referenceCandidates.length} 条候选。`;
+      referenceResultsBody.innerHTML = "";
+
+      if (!referenceCandidates.length) {
+        referenceResultsBody.innerHTML = '<tr><td colspan="5" class="subtle">暂无候选结果。</td></tr>';
+        return;
+      }
+
+      referenceCandidates.forEach((candidate) => {
+        const row = document.createElement("tr");
+        row.className = `reference-result-row${candidate.id === selectedReferenceCandidateId ? " selected" : ""}`;
+        const imageCell = candidate.imageUrl
+          ? `<img class="reference-thumb" src="${escapeHtml(candidate.imageUrl)}" alt="${escapeHtml(candidate.name)}">`
+          : "-";
+        row.innerHTML = `
+          <td><input type="radio" name="reference-candidate-radio" value="${escapeHtml(candidate.id)}"${candidate.id === selectedReferenceCandidateId ? " checked" : ""}></td>
+          <td><strong>${escapeHtml(candidate.name)}</strong><div class="meta">${escapeHtml(candidate.id)}</div></td>
+          <td>${escapeHtml(candidate.price === "" ? "-" : candidate.price)}</td>
+          <td>${imageCell}</td>
+          <td><span class="reference-confidence">${escapeHtml(referenceConfidenceLabel(candidate.confidence))}</span></td>
+        `;
+        row.addEventListener("click", () => {
+          selectedReferenceCandidateId = candidate.id;
+          renderReferenceCandidates(referenceCandidates.map((item) => item.raw), referenceResultSummary.textContent);
+        });
+        row.querySelector("input").addEventListener("click", (event) => {
+          event.stopPropagation();
+          selectedReferenceCandidateId = candidate.id;
+          renderReferenceCandidates(referenceCandidates.map((item) => item.raw), referenceResultSummary.textContent);
+        });
+        referenceResultsBody.appendChild(row);
+      });
+    }
+
+    function getSelectedReferenceCandidate() {
+      return referenceCandidates.find((candidate) => candidate.id === selectedReferenceCandidateId) || null;
+    }
+
+    function applyReferenceResponse(data, fallbackSummary) {
+      const referenceProduct = firstReferenceObject(data);
+      if (referenceProduct) {
+        referenceProductState = referenceProduct;
+      } else if (data && typeof data === "object") {
+        referenceProductState = data.reference_product || referenceProductState;
+      }
+
+      const candidates = firstReferenceArray(data);
+      if (candidates.length) {
+        renderReferenceCandidates(candidates, data.summary || fallbackSummary);
+        return;
+      }
+
+      if (referenceProduct) {
+        renderReferenceCandidates([referenceProduct], data.summary || fallbackSummary);
+        return;
+      }
+
+      renderReferenceCandidates([], data.summary || fallbackSummary);
+    }
+
+    async function loadReferenceCacheStatus() {
+      referenceCacheStatus.textContent = "正在读取缓存状态...";
+      try {
+        const response = await fetch(REFERENCE_CACHE_STATUS_URL);
+        const data = await readReferenceJson(response, "读取缓存状态失败");
+        renderReferenceCacheStatus(data);
+        setReferenceStatus("参考商品缓存状态已刷新。", "success");
+      } catch (error) {
+        referenceCacheStatus.textContent = "缓存状态接口暂不可用。";
+        setReferenceStatus(`缓存状态读取失败：${error.message}`, "error");
+      }
+    }
+
+    async function captureReferenceProduct() {
+      const payload = referenceSourcePayload();
+      if (!payload.reference_url) {
+        setReferenceStatus("请填写 1688 参考 URL。", "error");
+        referenceUrlInput.focus();
+        return;
+      }
+
+      setReferenceBusy(true);
+      setReferenceStatus("正在读取参考商品...");
+      try {
+        const response = await fetch(REFERENCE_CAPTURE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await readReferenceJson(response, "读取参考商品失败");
+        applyReferenceResponse(data, "参考商品已读取，可继续生成候选。");
+        setReferenceStatus(data.message || "参考商品已读取。", "success");
+        await loadReferenceCacheStatus();
+      } catch (error) {
+        setReferenceStatus(`读取失败：${error.message}`, "error");
+      } finally {
+        setReferenceBusy(false);
+      }
+    }
+
+    async function matchReferenceProducts() {
+      const payload = {
+        ...referenceSourcePayload(),
+        reference_product: referenceProductState,
+      };
+      if (!payload.reference_url && !payload.keyword && !payload.reference_product) {
+        setReferenceStatus("请填写参考 URL 或商品关键词。", "error");
+        referenceKeywordInput.focus();
+        return;
+      }
+
+      setReferenceBusy(true);
+      setReferenceStatus("正在生成候选...");
+      try {
+        const response = await fetch(REFERENCE_MATCH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await readReferenceJson(response, "生成候选失败");
+        applyReferenceResponse(data, "候选已生成。");
+        setReferenceStatus(data.message || "候选已生成。", "success");
+      } catch (error) {
+        setReferenceStatus(`生成候选失败：${error.message}`, "error");
+      } finally {
+        setReferenceBusy(false);
+      }
+    }
+
+    async function confirmReferenceBind() {
+      const selectedCandidate = getSelectedReferenceCandidate();
+      if (!selectedCandidate) {
+        setReferenceStatus("请先选择一个候选 SKU。", "error");
+        return;
+      }
+      const ok = window.confirm("确认把所选参考 SKU 图片链接写入资料库？");
+      if (!ok) {
+        return;
+      }
+
+      setReferenceBusy(true);
+      setReferenceStatus("正在确认关联...");
+      try {
+        const response = await fetch(REFERENCE_CONFIRM_BIND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(referenceBindPayload(selectedCandidate)),
+        });
+        const data = await readReferenceJson(response, "确认关联失败");
+        setReferenceStatus(data.message || "关联已确认。", "success");
+      } catch (error) {
+        setReferenceStatus(`确认失败：${error.message}`, "error");
+      } finally {
+        setReferenceBusy(false);
+      }
+    }
+
+    function referenceDownloadName(response) {
+      const disposition = response.headers.get("content-disposition") || "";
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      if (utf8Match) {
+        return decodeURIComponent(utf8Match[1]);
+      }
+      const nameMatch = disposition.match(/filename="?([^";]+)"?/i);
+      return nameMatch ? nameMatch[1] : `reference-products-${Date.now()}.xlsx`;
+    }
+
+    function downloadReferenceBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportReferenceExcel() {
+      const payload = referenceExportPayload();
+      if (!payload.candidate_id && referenceCandidates.length) {
+        setReferenceStatus("请先选择一个候选 SKU。", "error");
+        return;
+      }
+      if (!payload.fields.length) {
+        setReferenceStatus("请至少选择一个导出字段。", "error");
+        return;
+      }
+
+      setReferenceBusy(true);
+      setReferenceStatus("正在导出 Excel...");
+      try {
+        const response = await fetch(REFERENCE_EXPORT_EXCEL_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await readReferenceJson(response, "导出 Excel 失败");
+          const output = data.download_url || data.file_url || data.url || data.file_path || data.path || "";
+          if (data.download_url || data.file_url || data.url) {
+            const link = document.createElement("a");
+            link.href = output;
+            link.download = data.file_name || "";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+          setReferenceStatus(data.message || (output ? `Excel 已导出：${output}` : "Excel 已导出。"), "success");
+          return;
+        }
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "导出 Excel 失败");
+        }
+        const blob = await response.blob();
+        downloadReferenceBlob(blob, referenceDownloadName(response));
+        setReferenceStatus("Excel 已导出。", "success");
+      } catch (error) {
+        setReferenceStatus(`导出失败：${error.message}`, "error");
+      } finally {
+        setReferenceBusy(false);
+      }
+    }
+
+    async function cleanupReferenceCache() {
+      setReferenceBusy(true);
+      setReferenceStatus("正在清理参考商品缓存...");
+      try {
+        const response = await fetch(REFERENCE_CACHE_CLEANUP_URL, { method: "POST" });
+        const data = await readReferenceJson(response, "清理缓存失败");
+        referenceProductState = null;
+        selectedReferenceCandidateId = "";
+        renderReferenceCandidates([], "缓存已清理，当前候选已清空。");
+        setReferenceStatus(data.message || "缓存已清理。", "success");
+        await loadReferenceCacheStatus();
+      } catch (error) {
+        setReferenceStatus(`清理失败：${error.message}`, "error");
+      } finally {
+        setReferenceBusy(false);
+      }
+    }
+
     function addMessage(role, content, error = false, extra = {}) {
       if (!activeConversation()) {
         createConversation();
@@ -3100,12 +5690,159 @@
       }
     }
 
+    function isExcelFile(file) {
+      const name = String(file?.name || "").toLowerCase();
+      return [".xlsx", ".xlsm", ".xltx", ".xltm"].some((suffix) => name.endsWith(suffix));
+    }
+
+    function excelFileDisplayName(file) {
+      return file?.webkitRelativePath || file?.relativePath || file?.name || "Excel 文件";
+    }
+
+    async function uploadExcelFile(file) {
+      if (!file) return;
+      if (!isExcelFile(file)) {
+        addMessage("assistant", "错误：请上传 .xlsx、.xlsm、.xltx 或 .xltm 格式的 Excel 文件。", true);
+        return;
+      }
+
+      const displayName = excelFileDisplayName(file);
+      const previewMessage = addMessage("assistant", `正在读取 Excel：${displayName} ...`, false, {
+        excel_upload_pending: true,
+      });
+      try {
+        const url = `${EXCEL_PREVIEW_URL}?filename=${encodeURIComponent(displayName)}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+          body: file,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || "Excel 读取失败");
+        }
+
+        Object.assign(previewMessage, {
+          content: `已读取 Excel：${displayName}`,
+          excel_upload_pending: false,
+          excel_preview: data,
+          interactions: Array.isArray(data.interactions) ? data.interactions : [],
+          error: false,
+        });
+      } catch (error) {
+        Object.assign(previewMessage, {
+          content: `错误：${error.message}`,
+          excel_upload_pending: false,
+          error: true,
+        });
+      } finally {
+        saveStoredConversations();
+        renderMessages();
+      }
+    }
+
+    async function uploadExcelFiles(files) {
+      const excelFiles = Array.from(files || []).filter(isExcelFile);
+      if (!excelFiles.length) {
+        addMessage("assistant", "错误：没有找到可读取的 Excel 文件。", true);
+        return;
+      }
+      for (const file of excelFiles) {
+        await uploadExcelFile(file);
+      }
+    }
+
+    function readDirectoryEntries(reader) {
+      return new Promise((resolve, reject) => {
+        reader.readEntries(resolve, reject);
+      });
+    }
+
+    async function readAllDirectoryEntries(reader) {
+      const entries = [];
+      while (true) {
+        const batch = await readDirectoryEntries(reader);
+        if (!batch.length) {
+          break;
+        }
+        entries.push(...batch);
+      }
+      return entries;
+    }
+
+    function readFileEntry(entry) {
+      return new Promise((resolve, reject) => {
+        entry.file(resolve, reject);
+      });
+    }
+
+    function annotateDroppedFilePath(file, relativePath) {
+      if (!relativePath || file.webkitRelativePath) {
+        return file;
+      }
+      try {
+        Object.defineProperty(file, "webkitRelativePath", {
+          value: relativePath,
+          configurable: true,
+        });
+      } catch {
+        file.relativePath = relativePath;
+      }
+      return file;
+    }
+
+    async function readExcelEntryFiles(entry, prefix = "") {
+      if (!entry) {
+        return [];
+      }
+      if (entry.isFile) {
+        const file = await readFileEntry(entry);
+        const relativePath = `${prefix}${file.name}`;
+        return [annotateDroppedFilePath(file, relativePath)];
+      }
+      if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const entries = await readAllDirectoryEntries(reader);
+        const nestedFiles = await Promise.all(entries.map((child) => (
+          readExcelEntryFiles(child, `${prefix}${entry.name}/`)
+        )));
+        return nestedFiles.flat();
+      }
+      return [];
+    }
+
+    async function readExcelEntriesFromDataTransfer(dataTransfer) {
+      const items = Array.from(dataTransfer?.items || []);
+      if (!items.length) {
+        return Array.from(dataTransfer?.files || []);
+      }
+
+      const files = [];
+      for (const item of items) {
+        if (item.kind && item.kind !== "file") {
+          continue;
+        }
+        const entry = item.webkitGetAsEntry?.();
+        if (entry) {
+          files.push(...await readExcelEntryFiles(entry));
+          continue;
+        }
+        const file = item.getAsFile?.();
+        if (file) {
+          files.push(file);
+        }
+      }
+      return files;
+    }
+
     async function sendMessage(message) {
       const { allowChat, allowTools, allowSkills, allowSelfEvolution } = getAgentMode();
       const conversation = activeConversation();
       const previousHistory = conversation ? conversation.history.slice(-20).map((item) => ({
         role: item.role,
-        content: item.role === "assistant" ? (item.response || item.model_reply || item.content || "") : item.content,
+        content: messageContentForHistory(item),
       })) : [];
 
       addMessage("user", message);
@@ -3163,6 +5900,8 @@
           action: data.action || "none",
           params: data.params || {},
           action_result: actionResult,
+          action_payload: data.action_payload || null,
+          interactions: Array.isArray(data.interactions) ? data.interactions : [],
           response: data.response || "",
           allowChat,
           allowTools,
@@ -3503,6 +6242,41 @@
       sendMessage(message);
     });
 
+    attachmentButton.addEventListener("click", () => {
+      excelFileInput.click();
+    });
+
+    excelFileInput.addEventListener("change", async () => {
+      await uploadExcelFiles(excelFileInput.files);
+      excelFileInput.value = "";
+    });
+
+    messagesEl.addEventListener("dragenter", (event) => {
+      event.preventDefault();
+      dragDepth += 1;
+      messagesEl.classList.add("drag-over");
+    });
+
+    messagesEl.addEventListener("dragover", (event) => {
+      event.preventDefault();
+    });
+
+    messagesEl.addEventListener("dragleave", (event) => {
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) {
+        messagesEl.classList.remove("drag-over");
+      }
+    });
+
+    messagesEl.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      dragDepth = 0;
+      messagesEl.classList.remove("drag-over");
+      const files = await readExcelEntriesFromDataTransfer(event.dataTransfer);
+      await uploadExcelFiles(files);
+    });
+
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
@@ -3522,6 +6296,9 @@
     skillSearch.addEventListener("input", renderSkills);
     navChatButton.addEventListener("click", showChatView);
     navSkillsButton.addEventListener("click", showSkillsView);
+    navManagementButton.addEventListener("click", showManagementView);
+    navRecordsButton.addEventListener("click", showRecordsView);
+    navReferenceButton.addEventListener("click", showReferenceView);
     navEvolutionButton.addEventListener("click", showEvolutionView);
     backConfigButton.addEventListener("click", showConfig);
     logoutButton.addEventListener("click", showConfig);
@@ -3544,6 +6321,33 @@
     allowToolToggle.addEventListener("change", updateAgentModeLabels);
     allowSkillToggle.addEventListener("change", updateAgentModeLabels);
     allowSelfEvolutionToggle.addEventListener("change", saveSelfEvolutionSettings);
+    lanShareToggle.addEventListener("change", saveLanShareSettings);
+    restartServiceButton.addEventListener("click", restartService);
+    refreshManagementButton.addEventListener("click", loadManagementStatus);
+    refreshRecordTypesButton.addEventListener("click", loadRecordTypes);
+    refreshRecordsButton.addEventListener("click", loadBusinessRecords);
+    recordTypeSelect.addEventListener("change", () => {
+      renderRecordTypes(recordTypesCache);
+      loadBusinessRecords();
+    });
+    recordsQueryForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadBusinessRecords();
+    });
+    recordsUpsertForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveBusinessRecord();
+    });
+    clearRecordFormButton.addEventListener("click", clearRecordForm);
+    referenceSourceForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      matchReferenceProducts();
+    });
+    referenceCaptureButton.addEventListener("click", captureReferenceProduct);
+    referenceMatchButton.addEventListener("click", matchReferenceProducts);
+    referenceConfirmButton.addEventListener("click", confirmReferenceBind);
+    referenceExportButton.addEventListener("click", exportReferenceExcel);
+    referenceCleanupButton.addEventListener("click", cleanupReferenceCache);
     memoryConfirmButton.addEventListener("click", () => submitMemoryDecision(MEMORY_CONFIRM_URL, "保存"));
     memoryRejectButton.addEventListener("click", () => submitMemoryDecision(MEMORY_REJECT_URL, "忽略"));
 
@@ -3552,6 +6356,7 @@
     updateAgentModeLabels();
     loadConfig();
     loadSelfEvolutionSettings();
+    loadManagementStatus();
   </script>
 </body>
 </html>

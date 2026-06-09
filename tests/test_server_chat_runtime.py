@@ -1,7 +1,12 @@
 import unittest
+import os
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
+import openpyxl
 
 import server
 from core.agent_state import AgentResult
@@ -42,6 +47,109 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertTrue(request.allowSkills)
         self.assertTrue(request.allowSelfEvolution)
 
+    def test_excel_preview_upload_endpoint_reads_all_sheets(self):
+        workbook = openpyxl.Workbook()
+        first = workbook.active
+        first.title = "报价表"
+        first.append(["货号", "品名"])
+        first.append(["QQL701A", "大盒五子棋"])
+        second = workbook.create_sheet("联系人")
+        second.append(["工厂", "业务员"])
+        second.append(["潘多多", "潘小姐"])
+
+        from io import BytesIO
+
+        buffer = BytesIO()
+        workbook.save(buffer)
+        workbook.close()
+
+        client = TestClient(server.app)
+        response = client.post(
+            "/files/excel/preview?filename=quote.xlsx",
+            content=buffer.getvalue(),
+            headers={"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual([sheet["name"] for sheet in data["data"]["sheets"]], ["报价表", "联系人"])
+        self.assertEqual(data["data"]["sheets"][0]["headers"], ["货号", "品名"])
+        self.assertEqual(data["data"]["sheets"][1]["rows"][0], ["潘多多", "潘小姐"])
+
+    def test_excel_feedback_endpoint_persists_user_correction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            local_home = Path(temp_dir) / "YoubestarLocal"
+            with patch.dict(os.environ, {"YOUBESTAR_LOCAL_HOME": str(local_home)}):
+                client = TestClient(server.app)
+                feedback_response = client.post(
+                    "/files/excel/feedback",
+                    json={
+                        "headers": ["名称", "数量", "备注"],
+                        "sheet_name": "修正表",
+                        "category": "inventory",
+                        "field_mappings": {"名称": "product_name"},
+                        "scope": "template",
+                    },
+                )
+                self.assertEqual(feedback_response.status_code, 200)
+                self.assertTrue(feedback_response.json()["ok"])
+
+                workbook = openpyxl.Workbook()
+                sheet = workbook.active
+                sheet.title = "修正表"
+                sheet.append(["名称", "数量", "备注"])
+                sheet.append(["积木A", 3, "样例"])
+
+                from io import BytesIO
+
+                buffer = BytesIO()
+                workbook.save(buffer)
+                workbook.close()
+
+                preview_response = client.post(
+                    "/files/excel/preview?filename=feedback.xlsx",
+                    content=buffer.getvalue(),
+                    headers={"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+                )
+                self.assertEqual(preview_response.status_code, 200)
+                classification = preview_response.json()["data"]["sheets"][0]["classification"]
+                self.assertEqual(classification["category"], "inventory")
+                self.assertTrue(classification["feedback"]["applied"])
+                self.assertTrue((local_home / "data" / "excel_feedback.sqlite3").exists())
+
+    def test_business_records_endpoints_upsert_and_query_local_database(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            local_home = Path(temp_dir) / "YoubestarLocal"
+            with patch.dict(os.environ, {"YOUBESTAR_LOCAL_HOME": str(local_home)}):
+                client = TestClient(server.app)
+
+                types_response = client.get("/business-records/types")
+                self.assertEqual(types_response.status_code, 200)
+                self.assertIn("customer", {item["record_type"] for item in types_response.json()["types"]})
+
+                save_response = client.post(
+                    "/business-records/upsert",
+                    json={
+                        "type": "customer",
+                        "title": "汕头星河贸易",
+                        "content": "联系人陈小姐，电话 13500000000",
+                        "source": "unit-test",
+                        "fields": {"customer_id": "C-001", "name": "汕头星河贸易", "contact": "陈小姐"},
+                    },
+                )
+                self.assertEqual(save_response.status_code, 200)
+                saved = save_response.json()
+                self.assertTrue(saved["ok"])
+                self.assertEqual(saved["record"]["business_key"], "C-001")
+                self.assertTrue(saved["record"]["source_ip"])
+
+                query_response = client.post("/business-records/query", json={"type": "customer", "query": "星河"})
+                self.assertEqual(query_response.status_code, 200)
+                queried = query_response.json()
+                self.assertEqual(queried["summary"]["匹配数量"], 1)
+                self.assertEqual(queried["records"][0]["fields"]["contact"], "陈小姐")
+                self.assertTrue((local_home / "data" / "business_records.sqlite3").exists())
+
     def test_run_agent_runtime_returns_chat_response_shape(self):
         result = AgentResult(
             reply="你好，我在。",
@@ -50,6 +158,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
             action="none",
             params={},
             action_result="无操作",
+            action_payload=None,
             response="你好，我在。",
             runtime_nodes=["direct_chat", "finalize"],
             thread_id="default",
@@ -70,6 +179,8 @@ class ServerChatRuntimeTest(unittest.TestCase):
         self.assertEqual(response.reply, "你好，我在。")
         self.assertEqual(response.action, "none")
         self.assertEqual(response.action_result, "无操作")
+        self.assertIsNone(response.action_payload)
+        self.assertEqual(response.interactions, [])
         self.assertEqual(response.response, "你好，我在。")
         self.assertIsNone(response.memory_candidate)
         run_mock.assert_called_once_with(
@@ -81,7 +192,40 @@ class ServerChatRuntimeTest(unittest.TestCase):
             allow_skills=True,
             allow_self_evolution=True,
             thread_id="chat-1",
+            history=None,
         )
+
+    def test_run_agent_runtime_passes_structured_interactions_to_chat_response(self):
+        interaction = {
+            "kind": "reference_product_match_review",
+            "title": "参考商品候选确认",
+            "items": [],
+        }
+        payload = {
+            "ok": True,
+            "kind": "reference_product_match",
+            "match_id": "match-1",
+        }
+        result = AgentResult(
+            reply="候选已生成。",
+            model_reply="",
+            thought="",
+            action="official.reference_product",
+            params={"operation": "match"},
+            action_result=str(payload),
+            action_payload=payload,
+            response="候选已生成。",
+            interactions=[interaction],
+            runtime_nodes=["execute", "finalize"],
+            thread_id="chat-1",
+            step_count=2,
+        )
+
+        with patch.object(server.agent_runtime, "run", return_value=result):
+            response = server.run_agent_runtime(FakeLLM(), "生成候选", True, thread_id="chat-1")
+
+        self.assertEqual(response.action_payload, payload)
+        self.assertEqual(response.interactions, [interaction])
 
     @patch("server.LLM")
     @patch("server.load_config")
@@ -94,6 +238,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
             action="official.read_file",
             params={},
             action_result="自我进化未开启：official.read_file",
+            action_payload=None,
             response="blocked",
             runtime_nodes=[],
             thread_id="default",
@@ -143,6 +288,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
             action="none",
             params={},
             action_result="无操作",
+            action_payload=None,
             response="订单已记录。",
             runtime_nodes=[],
             thread_id="default",
@@ -165,6 +311,7 @@ class ServerChatRuntimeTest(unittest.TestCase):
             action="local.factory_quote",
             params={"factory_name": "潘多多", "sku": "PD1102", "quantity": 100},
             action_result="货号：PD1102 数量：100 成本：15.225 报价总额：1674.75",
+            action_payload=None,
             response="工厂报价查询结果。",
             runtime_nodes=[],
             thread_id="default",

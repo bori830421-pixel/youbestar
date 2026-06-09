@@ -258,6 +258,44 @@ browser_desktop
 
 浏览器能力必须拆成两类：桌面可见浏览器用于打开页面、登录和人工查看；无头浏览器用于后台搜索、抓取、提取和校验。
 
+## 通用 Excel 表格处理
+
+Youbestar 的 Excel 能力不再只围绕工厂报价表设计。用户上传或拖拽 Excel 后，应先走 `official.preview_excel` 做通用预览和识别：
+
+- 读取每个工作表，保留表头前的厂家、联系人、说明等前置信息。
+- 显示检测到的表头和前 20 行样例。
+- 根据表头识别表格类型：报价表、订单表、库存表、客户表、采购表、财务表、物流表、商品资料表等。
+- 将原始表头映射到中文标准字段，并返回 `mapping_score`、候选字段、是否需要确认。
+- 未识别或模糊字段必须提示用户确认，不允许强行拼成报价表、订单表或其他业务类型。
+- 字段目录、别名或字段含义可以由智能体提出扩展建议，但必须经过用户确认弹窗或明确确认后才能生效。
+
+当前重点标准字段包括：
+
+```text
+standard_price              标准售价
+wholesale_price             批发价
+output_tax_rate             销项税率
+input_tax_rate              进项税率
+short_name                  商品简称
+sku_code                    规格编码
+toy_type                    玩具类型
+product_spec                产品规格
+product_size_cm             产品尺寸(cm)
+package_size_cm             包装尺寸(cm)
+inner_box_quantity          内盒数量
+inner_box_size_cm           内盒尺寸(cm)
+carton_size_cm              外箱尺寸(cm)
+carton_gross_weight_kg      箱毛重(kg)
+carton_net_weight_kg        箱净重(kg)
+single_gross_weight_g       单品毛重(g)
+single_net_weight_g         单品净重(g)
+shipping_packaged_weight_g  快递包装重量(g)
+dimension_text              尺寸原文
+weight_text                 重量原文
+```
+
+报价资料入库仍使用 `local.factory_quote`，但必须在用户明确要求导入/写入时才执行。导入前至少要识别到 `factory_name` 或 `brand` 之一；如果两者都缺失或模糊，系统必须返回待确认结果，不写入 SQLite。用户用短名查询时，例如“吉贵”，只作为筛选条件，不覆盖 Excel 表头里检测到的完整工厂名。
+
 ## 核心目录
 
 ```text

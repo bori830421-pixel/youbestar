@@ -31,6 +31,30 @@
     "description": "根据股票代码或中文名称调用本地 get_stock_price(symbol) 快速返回 A 股实时行情。",
     "author": "youbestar"
   },
+  "official.preview_excel": {
+    "path": "agent_system/skills/official/preview_excel.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "Excel 通用表格识别预览",
+    "description": "通用 Excel 表格处理分类系统入口；读取所有工作表，返回表头前几行、表头、前 20 行、表格类型识别、中文标准字段映射、未识别/ambiguous 状态和待用户弹窗确认的字段目录建议，不写数据库。",
+    "author": "youbestar"
+  },
+  "official.business_records": {
+    "path": "agent_system/skills/official/business_records.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "共享办公资料库",
+    "description": "在本地共享办公资料库中结构化新增、修改或查询客户、产品、订单、报价、库存、采购、财务和物流资料。",
+    "author": "youbestar"
+  },
+  "official.reference_product": {
+    "path": "agent_system/skills/official/reference_product.py",
+    "version": "1.0.0",
+    "source": "official",
+    "title": "参考商品采集",
+    "description": "轻读取 1688 参考商品的 SKU、价格、库存和图片 URL，生成资料库候选，确认后写入图片关联，并在导出 Excel 时按需下载图片。",
+    "author": "youbestar"
+  },
   "official.write_skill": {
     "path": "agent_system/skills/official/write_skill.py",
     "version": "1.0.0",

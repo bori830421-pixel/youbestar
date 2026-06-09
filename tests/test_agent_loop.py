@@ -55,7 +55,9 @@ class AgentLoopTest(unittest.TestCase):
 
         self.assertIn("local.factory_quote", prompt)
         self.assertIn("工厂报价、货号资料、产品尺寸", prompt)
-        self.assertIn("factory_name、sku、quantity", prompt)
+        self.assertIn("factory_name、brand、sku、quantity", prompt)
+        self.assertIn("factory_name 工厂名称、brand 品牌二者之一", prompt)
+        self.assertIn("二者都未识别时不得直接写入", prompt)
         self.assertIn("operation 使用 bind_image", prompt)
         self.assertIn('默认图片绑定为 image_type="sku_image"', prompt)
         self.assertIn('实拍图/实拍照片', prompt)
@@ -67,6 +69,55 @@ class AgentLoopTest(unittest.TestCase):
         self.assertIn("业务员、业务联系人、业务电话、联系电话", prompt)
         self.assertIn("operation 使用 contact", prompt)
         self.assertIn("价格默认人民币元且展示两位小数", prompt)
+
+    def test_prompt_routes_excel_preview_before_import(self):
+        prompt = build_agent_prompt(Memory(), r"先读取 D:\工厂报价\quote.xlsx 的表头和前20行", allow_chat=True)
+
+        self.assertIn("official.preview_excel", prompt)
+        self.assertIn("Excel 通用表格处理分类系统", prompt)
+        self.assertIn("你不是只处理工厂报价表", prompt)
+        self.assertIn("订单表、库存表、客户表、采购表、财务表、物流表、商品资料表", prompt)
+        self.assertIn("固定流程", prompt)
+        self.assertIn("所有工作表", prompt)
+        self.assertIn("表头前几行", prompt)
+        self.assertIn("前 20 行", prompt)
+        self.assertIn("识别表格类型", prompt)
+        self.assertIn("中文标准字段映射", prompt)
+        self.assertIn("unknown/ambiguous", prompt)
+        self.assertIn("未识别字段", prompt)
+        self.assertIn("字段目录新增、别名新增或含义修改", prompt)
+        self.assertIn("必须等待用户弹窗或明确确认后才生效", prompt)
+        self.assertIn("不要在预览阶段写入资料库", prompt)
+        self.assertIn("operation 使用 import", prompt)
+        self.assertIn("“品牌价”是 cost_unit_price 成本单价，不是 brand 品牌", prompt)
+        self.assertIn("只有“产品报价表”且无厂家/品牌时不得写库", prompt)
+
+    def test_prompt_describes_excel_import_identity_gate(self):
+        prompt = build_agent_prompt(Memory(), "把这个 Excel 写入报价资料库", allow_chat=True)
+
+        self.assertIn("身份门禁", prompt)
+        self.assertIn("factory_name 工厂名称、brand 品牌二者之一", prompt)
+        self.assertIn("二者都未识别或不确定时，必须停止写入并询问用户确认", prompt)
+        self.assertIn("禁止把文件名、普通标题、第一行泛称随便当工厂名称", prompt)
+
+    def test_prompt_routes_shared_business_records_to_official_skill(self):
+        prompt = build_agent_prompt(Memory(), "把客户资料保存到共享办公资料库", allow_chat=True)
+
+        self.assertIn("official.business_records", prompt)
+        self.assertIn("共享办公资料库、资料库、办公资料、业务资料", prompt)
+        self.assertIn("operation，可为 query、upsert、list_types 或 status", prompt)
+        self.assertIn("record_type、fields、title、content、tags、source、actor", prompt)
+        self.assertIn("Excel 读取/识别仍优先 official.preview_excel", prompt)
+        self.assertIn("工厂报价库仍优先 local.factory_quote", prompt)
+
+    def test_prompt_routes_1688_reference_products_to_official_skill(self):
+        prompt = build_agent_prompt(Memory(), "这个 1688 链接读取 SKU 图和名称：https://detail.1688.com/offer/772233445566.html", allow_chat=True)
+
+        self.assertIn("official.reference_product", prompt)
+        self.assertIn("只轻读取 SKU、价格、库存、图片 URL", prompt)
+        self.assertIn("不下载图片、不写资料库", prompt)
+        self.assertIn("confirm_bind 必须在用户明确确认后传 confirmed=true", prompt)
+        self.assertIn("客户报价可传 margin_rate 或 margin_percent", prompt)
 
     def test_prompt_routes_latest_model_news_to_web_query(self):
         prompt = build_agent_prompt(Memory(), "最新有什么新出来的大模型", allow_chat=True)
